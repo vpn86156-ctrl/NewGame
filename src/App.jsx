@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle, Backpack, BookOpen, Check, CheckCircle2, ChevronDown, ChevronRight,
   Compass, Eye, EyeOff, Hammer, Home, Info, Map, Menu, Play, RotateCcw, Search,
-  ScrollText, Sparkles, TreePine, X,
+  ScrollText, Sparkles, TreePine, Users, X,
 } from 'lucide-react';
 import { useGame } from './context';
 import { stages } from './data';
@@ -17,6 +17,7 @@ import Resources from './pages/Resources';
 import { Crafts, Obtain } from './pages/Library';
 import Stories from './pages/Stories';
 import Journal from './pages/Journal';
+import Npcs from './pages/Npcs';
 
 const navGroups = [
   {
@@ -30,6 +31,7 @@ const navGroups = [
       { id: 'resources', label: 'Из моих ресурсов', icon: Backpack },
       { id: 'crafts', label: 'Все крафты', icon: Hammer },
       { id: 'obtain', label: 'Как получить', icon: Compass },
+      { id: 'npcs', label: 'Все NPC', icon: Users },
     ],
   },
   {
@@ -144,6 +146,7 @@ function CurrentPage() {
     case 'resources': return <Resources />;
     case 'crafts': return <Crafts />;
     case 'obtain': return <Obtain />;
+    case 'npcs': return <Npcs />;
     case 'stories': return <Stories />;
     case 'journal': return <Journal />;
     default: return <HomePage />;

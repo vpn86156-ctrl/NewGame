@@ -9,6 +9,7 @@ import { getCategoryLabel, getIngredientCount, getItem, getItemName, getRecipesF
 import { ItemIcon, Modal } from './UI';
 import TerrariaIcon from './TerrariaIcon';
 import StageIcon from './StageIcon';
+import ItemDetailsModal from './ItemDetailsModal';
 
 function ModalTitle({ eyebrow, title, children }) {
   return <div className="modal-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{children}</div>;
@@ -28,11 +29,18 @@ function RecipeModal({ item }) {
       </div>
       <p className="item-modal__description">{activeRecipe.description}</p>
       {variants.length > 1 && <div className="modal-section recipe-variants"><span className="eyebrow">СПОСОБЫ СОЗДАНИЯ · {variants.length}</span><div>{variants.map((recipe, index) => <button key={recipe.id} className={activeRecipe.id === recipe.id ? 'is-active' : ''} onClick={() => setActiveRecipe(recipe)}><TerrariaIcon itemKey={recipe.result} size="sm" /><span><strong>Вариант {index + 1}</strong><small>{recipe.station}</small></span>{activeRecipe.id === recipe.id && <Check size={15} />}</button>)}</div></div>}
-      <div className="modal-section"><span className="eyebrow">ПОНАДОБИТСЯ</span><div className="modal-ingredients">
+      <div className="modal-section"><span className="eyebrow">ПОНАДОБИТСЯ · НАЖМИ НА ИНГРЕДИЕНТ, ЧТОБЫ УЗНАТЬ, ГДЕ ЕГО ВЗЯТЬ</span><div className="modal-ingredients">
         {activeRecipe.ingredients.map((ingredient) => {
           const have = getIngredientCount(inventory, ingredient);
           const enough = have >= ingredient.amount;
-          return <div key={`${ingredient.group || ingredient.key}-${ingredient.amount}`} className="modal-ingredient"><div className="modal-ingredient__main"><TerrariaIcon itemKey={ingredient.iconKey} /><span><strong>{ingredient.name}</strong><small className={enough ? 'has-enough' : 'not-enough'}>{ingredient.group ? `Лучший вариант в рюкзаке: ${have}` : `В рюкзаке: ${have}`}</small></span><b>×{ingredient.amount}</b></div>{ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length})</summary><div>{ingredient.options.map((key) => <span key={key} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b></span>)}</div></details>}</div>;
+          const MainTag = ingredient.key ? 'button' : 'div';
+          const openItem = () => ingredient.key && setModal({ type: 'item', itemKey: ingredient.key, returnRecipe: activeRecipe });
+          return <div key={`${ingredient.group || ingredient.key}-${ingredient.amount}`} className="modal-ingredient">
+            <MainTag className={`modal-ingredient__main ${ingredient.key ? 'is-clickable' : ''}`} onClick={ingredient.key ? openItem : undefined} aria-label={ingredient.key ? `Как получить: ${ingredient.name}` : undefined}>
+              <TerrariaIcon itemKey={ingredient.iconKey} /><span><strong>{ingredient.name}</strong><small className={enough ? 'has-enough' : 'not-enough'}>{ingredient.group ? `Лучший вариант в рюкзаке: ${have}` : `В рюкзаке: ${have}`}</small>{ingredient.key && <em className="ingredient-open-hint">Где и как получить</em>}</span><b>×{ingredient.amount}</b>{ingredient.key && <ChevronRight size={16} />}
+            </MainTag>
+            {ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length}) · нажми на предмет для подробностей</summary><div>{ingredient.options.map((key) => <button key={key} onClick={() => setModal({ type: 'item', itemKey: key, returnRecipe: activeRecipe })} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b><ChevronRight size={12} /></button>)}</div></details>}
+          </div>;
         })}
       </div></div>
       <div className="station-note"><TerrariaIcon itemKey={getStationIcon(activeRecipe.stations[0])} size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{activeRecipe.station}</strong></div></div>
@@ -166,6 +174,7 @@ export default function ModalRoot() {
   if (!modal) return null;
   switch (modal.type) {
     case 'recipe': return <RecipeModal item={modal.item} />;
+    case 'item': return <ItemDetailsModal itemKey={modal.itemKey} returnRecipe={modal.returnRecipe} />;
     case 'obtain': return <ObtainModal item={modal.item} />;
     case 'complete-stage': return <CompleteStageModal stage={modal.stage} />;
     case 'reset-world': return <ResetWorldModal />;

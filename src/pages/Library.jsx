@@ -4,13 +4,13 @@ import {
   EyeOff, Heart, MapPin, Search, SlidersHorizontal,
 } from 'lucide-react';
 import { useGame } from '../context';
-import { obtainItems } from '../data';
 import {
-  allGameRecipes, gameCatalog, getCategoryLabel, getItem, getItemName, getStationLabel,
-  obtainItemKeys, recipesByResult,
+  allGameRecipes, allItemKeys, gameCatalog, getCategoryLabel, getItem, getItemColor,
+  getItemName, getItemSearchText, getSourceName, getStationLabel, isItemVisible,
+  matchesSearch, obtainLabels, recipesByResult, isRecipeVisible,
 } from '../gameData';
 import { EmptyState, PageHeader, Reveal } from '../components/UI';
-import TerrariaIcon, { GameSprite } from '../components/TerrariaIcon';
+import TerrariaIcon, { GameSprite, NamedSprite, SourceSprite } from '../components/TerrariaIcon';
 
 const PAGE_SIZE = 48;
 
@@ -60,12 +60,11 @@ export function Crafts() {
     .sort((a, b) => getCategoryLabel(a).localeCompare(getCategoryLabel(b), 'ru')), []);
   const progressRecipes = useMemo(() => allGameRecipes.filter((recipe) => !spoilerFree || recipe.stage <= currentStageIndex), [currentStageIndex, spoilerFree]);
   const visible = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
     return progressRecipes.filter((recipe) => {
       if (category !== 'all' && !recipe.categories.includes(category)) return false;
       if (station !== 'all' && !recipe.stations.includes(station)) return false;
       if (onlyFavorites && !favorites.includes(recipe.id)) return false;
-      return !normalized || recipe.searchText.includes(normalized);
+      return matchesSearch(recipe.searchText, query);
     }).sort((a, b) => {
       if (sortBy === 'game') return ((getItem(a.result)?.id ?? 99999) - (getItem(b.result)?.id ?? 99999)) || a.name.localeCompare(b.name, 'ru');
       if (sortBy === 'stage') return a.stage - b.stage || a.name.localeCompare(b.name, 'ru');
@@ -150,40 +149,85 @@ export function Crafts() {
 export function Obtain() {
   const { currentStageIndex, spoilerFree, setModal, favorites, toggleFavorite } = useGame();
   const [query, setQuery] = useState('');
-  const [biome, setBiome] = useState('Все места');
-  const availableItems = obtainItems.filter((item) => !spoilerFree || item.stage <= currentStageIndex);
-  const biomes = ['Все места', ...new Set(availableItems.map((item) => item.biome))];
-  const visible = availableItems.filter((item) => {
-    if (biome !== 'Все места' && item.biome !== biome) return false;
-    return `${item.name} ${item.source} ${item.category}`.toLowerCase().includes(query.toLowerCase());
-  });
+  const [method, setMethod] = useState('all');
+  const [category, setCategory] = useState('all');
+  const [page, setPage] = useState(1);
+  const availableItems = useMemo(() => allItemKeys.filter((key) => isItemVisible(key, currentStageIndex, spoilerFree)), [currentStageIndex, spoilerFree]);
+  const categories = useMemo(() => [...new Set(allItemKeys.flatMap((key) => getItem(key)?.categories || []))]
+    .sort((a, b) => getCategoryLabel(a).localeCompare(getCategoryLabel(b), 'ru')), []);
+  const methods = useMemo(() => [...new Set(allItemKeys.flatMap((key) => getItem(key)?.obtain || []))]
+    .filter((id) => obtainLabels[id])
+    .sort((a, b) => obtainLabels[a].localeCompare(obtainLabels[b], 'ru')), []);
+  const visible = useMemo(() => availableItems.filter((key) => {
+    const item = getItem(key);
+    if (method !== 'all' && !(item?.obtain || []).includes(method)) return false;
+    if (category !== 'all' && !(item?.categories || []).includes(category)) return false;
+    return matchesSearch(getItemSearchText(key), query);
+  }), [availableItems, category, method, query]);
+
+  useEffect(() => { setPage(1); }, [query, method, category, currentStageIndex, spoilerFree]);
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const reset = () => { setQuery(''); setMethod('all'); setCategory('all'); };
+  const changePage = (next) => {
+    setPage(Math.max(1, Math.min(pageCount, next)));
+    document.getElementById('obtain-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
-    <div className="obtain-page page-stack">
-      <PageHeader eyebrow="КАРТА СОКРОВИЩ" title="Не создать. Найти." description="Точные места, маршруты поиска и небольшие подсказки для предметов, которые нельзя просто собрать на верстаке.">
-        <div className="obtain-header-emblem"><Compass size={30} /><span><strong>{visible.length}</strong> находок рядом<br />с твоим этапом</span></div>
+    <div className="obtain-page page-stack full-library">
+      <PageHeader
+        eyebrow={`ПОЛНЫЙ СПРАВОЧНИК · ${allItemKeys.length.toLocaleString('ru-RU')} ПРЕДМЕТОВ`}
+        title="Как найти любой предмет."
+        description="Крафт, противники, сундуки, магазины, рыбалка и особые способы. Нажми на предмет — внутри источники, настоящие изображения, шансы и условия получения."
+      >
+        <div className="obtain-header-emblem"><Compass size={30} /><span><strong>{visible.length.toLocaleString('ru-RU')}</strong> предметов<br />в текущей подборке</span></div>
       </PageHeader>
-      <SearchToolbar query={query} setQuery={setQuery} placeholder="Что ты хочешь найти?">
-        {biomes.map((item) => <button key={item} className={biome === item ? 'is-active' : ''} onClick={() => setBiome(item)}>{item !== 'Все места' && <MapPin size={12} />}{item}</button>)}
+      <SearchToolbar query={query} setQuery={setQuery} placeholder="Зенит, сапоги, Zenith, сундук…">
+        <button className={method === 'all' ? 'is-active' : ''} onClick={() => setMethod('all')}>Все способы</button>
+        {methods.map((id) => <button key={id} className={method === id ? 'is-active' : ''} onClick={() => setMethod(id)}>{obtainLabels[id]}</button>)}
       </SearchToolbar>
-      {spoilerFree && <Reveal className="library-spoiler-line"><EyeOff size={15} /><span>В списке только находки для уже открытых глав.</span></Reveal>}
-      <div className="obtain-grid">
-        {visible.map((item, index) => {
-          const favorite = favorites.includes(item.id);
-          return (
-            <Reveal key={item.id} delay={Math.min(index * 0.06, 0.3)}>
-              <article className="obtain-card" style={{ '--item-accent': item.color }}>
-                <div className="obtain-card__top"><TerrariaIcon itemKey={obtainItemKeys[item.id]} size="lg" /><span className="obtain-card__category">{item.category}</span><button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label="Избранное"><Heart size={16} fill={favorite ? 'currentColor' : 'none'} /></button></div>
-                <h3>{item.name}</h3><p>{item.description}</p>
-                <div className="obtain-card__source"><MapPin size={15} /><div><small>ГДЕ ИСКАТЬ</small><strong>{item.source}</strong></div></div>
-                <div className="obtain-card__footer"><span>{item.biome}</span><span>{item.chance}</span></div>
-                <button className="button button--soft button--full" onClick={() => setModal({ type: 'obtain', item })}>Показать маршрут <ChevronRight size={16} /></button>
-              </article>
-            </Reveal>
-          );
-        })}
-      </div>
-      {visible.length === 0 && <EmptyState icon="compass" title="Сокровище спряталось слишком хорошо" text="Попробуй другой запрос или выбери все места." action={<button className="button button--soft" onClick={() => { setQuery(''); setBiome('Все места'); }}>Сбросить поиск</button>} />}
+      <Reveal className="catalog-controls" delay={0.07}>
+        <div className="catalog-controls__selects">
+          <label><SlidersHorizontal size={15} /><span>Категория</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">Все категории</option>{categories.map((id) => <option key={id} value={id}>{getCategoryLabel(id)}</option>)}</select></label>
+        </div>
+        <div className="catalog-controls__meta"><span className="sprite-proof"><GameSprite itemKey="Aglet" size={21} /> Все предметы игры</span><span>{visible.length ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, visible.length)} из ${visible.length.toLocaleString('ru-RU')}` : '0 предметов'}</span></div>
+      </Reveal>
+      {spoilerFree && <Reveal className="library-spoiler-line"><EyeOff size={15} /><span>Поздние предметы скрыты режимом без спойлеров. Отключи его, чтобы увидеть весь каталог.</span></Reveal>}
+      {pageItems.length > 0 ? <>
+        <div className="obtain-grid" id="obtain-grid">
+          {pageItems.map((key, index) => {
+            const item = getItem(key);
+            const favorite = favorites.includes(`item-${key}`);
+            const drops = gameCatalog.drops[key] || [];
+            const shops = gameCatalog.shops[key] || [];
+            const recipes = recipesByResult[key] || [];
+            const firstSource = drops[0] ? gameCatalog.sources[drops[0].source] : null;
+            const firstVendor = shops[0] ? gameCatalog.vendors[shops[0].vendor] : null;
+            const firstMethod = (item.obtain || []).find((id) => id !== 'crafted' && id !== 'vendor' && id !== 'drop');
+            const methodIcon = gameCatalog.obtainMethods.find((entry) => entry.id === firstMethod)?.icon?.split('/').pop();
+            const sourceTitle = firstSource ? getSourceName(firstSource) : firstVendor ? `Продаёт: ${getSourceName(firstVendor)}` : recipes[0] ? `Создать: ${recipes[0].station}` : obtainLabels[firstMethod] || 'Особый способ получения';
+            const sourceNote = drops[0]?.rate || (drops[0]?.quantity ? `Количество: ${drops[0].quantity}` : null) || (shops[0] ? 'Условия — внутри карточки' : recipes[0] ? `${recipes.length} ${recipes.length === 1 ? 'рецепт' : 'вариантов рецепта'}` : 'Подробности — внутри карточки');
+            return (
+              <Reveal key={key} delay={Math.min((index % 8) * 0.04, 0.24)}>
+                <article className="obtain-card obtain-card--catalog" style={{ '--item-accent': getItemColor(key) }}>
+                  <div className="obtain-card__top"><TerrariaIcon itemKey={key} size="lg" /><span className="obtain-card__category">{getCategoryLabel(item.categories?.[0])}</span><button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(`item-${key}`)} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} /></button></div>
+                  <h3>{getItemName(key)}</h3>{item.nameRu && <span className="obtain-card__english">{item.name}</span>}
+                  <div className="obtain-card__methods">{(item.obtain || []).slice(0, 3).map((id) => <span key={id}>{obtainLabels[id] || id}</span>)}{item.unobtainable && <span className="is-unobtainable">Недоступно</span>}</div>
+                  <div className="obtain-card__source">
+                    {firstSource ? <SourceSprite source={firstSource} size={34} /> : firstVendor ? <SourceSprite source={firstVendor} size={34} /> : recipes[0] ? <GameSprite itemKey="WorkBench" size={30} /> : <NamedSprite icon={methodIcon} size={30} label={obtainLabels[firstMethod]} />}
+                    <div><small>ПЕРВЫЙ ИСТОЧНИК</small><strong>{sourceTitle}</strong><span>{sourceNote}</span></div>
+                  </div>
+                  <button className="button button--soft button--full" onClick={() => setModal({ type: 'item', itemKey: key })}>Все способы получения <ChevronRight size={16} /></button>
+                </article>
+              </Reveal>
+            );
+          })}
+        </div>
+        <div className="catalog-bottom"><span>Страница {safePage} из {pageCount}</span><Pagination page={safePage} pageCount={pageCount} onChange={changePage} /></div>
+      </> : <EmptyState icon="compass" title="Предметы не найдены" text="Попробуй русское или английское название, другой способ получения или сбрось фильтры." action={<button className="button button--soft" onClick={reset}>Сбросить фильтры</button>} />}
+      <footer className="catalog-attribution">Предметы, источники и спрайты: <a href="https://terraria.wiki.gg/" target="_blank" rel="noreferrer">Official Terraria Wiki</a> / Doeschi · русские названия: игровая локализация Terraria</footer>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   Sun, Sword, Swords, Target, TreePine, Trophy, X,
 } from 'lucide-react';
 import { useLockBody } from '../hooks';
+import { NamedSprite } from './TerrariaIcon';
 
 const iconMap = {
   sun: Sun, crown: Crown, eye: Eye, skull: Skull, flame: Flame, gear: Cog, leaf: Leaf,
@@ -49,24 +50,9 @@ export function Brand({ compact = false }) {
 
 export function PixelGuide({ size = 84 }) {
   return (
-    <svg className="pixel-guide" width={size} height={size} viewBox="0 0 64 64" shapeRendering="crispEdges" aria-label="Портрет Гида" role="img">
-      <rect width="64" height="64" rx="10" fill="#1b2925" />
-      <rect x="8" y="8" width="48" height="48" fill="#243730" />
-      <path d="M20 19h4v-5h18v4h5v16h-5v5h-5v5H26v-5h-6V23h-3v-5h3z" fill="#c99b70" />
-      <path d="M18 21v-7h5V9h19v5h5v10h-5v-7h-4v4h-5v-5H22v8h-4z" fill="#5c4030" />
-      <path d="M20 19h4v-5h16v3H27v5h-7z" fill="#7a573d" />
-      <rect x="24" y="26" width="4" height="3" fill="#2d3029" />
-      <rect x="37" y="26" width="4" height="3" fill="#2d3029" />
-      <rect x="31" y="29" width="4" height="6" fill="#ac7859" />
-      <rect x="28" y="37" width="10" height="3" fill="#7d5141" />
-      <path d="M20 43h6v5h12v-5h7v4h5v13H14V47h6z" fill="#5c8b55" />
-      <path d="M26 43h12v7H26z" fill="#d2ae7e" />
-      <path d="M28 48h8v12h-8z" fill="#d7c7a1" />
-      <rect x="17" y="50" width="5" height="10" fill="#476e47" />
-      <rect x="43" y="49" width="5" height="11" fill="#476e47" />
-      <rect x="5" y="5" width="4" height="4" fill="#d5f96f" opacity=".8" />
-      <rect x="53" y="48" width="3" height="3" fill="#d5f96f" opacity=".4" />
-    </svg>
+    <span className="pixel-guide pixel-guide--real" style={{ width: size, height: size }}>
+      <NamedSprite icon="Guide.png" label="Настоящий игровой спрайт Гида" size={Math.max(24, Math.round(size * 0.84))} />
+    </span>
   );
 }
 

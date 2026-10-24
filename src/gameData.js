@@ -91,7 +91,18 @@ export function getItem(key) {
 }
 
 export function getItemName(key) {
-  return itemNameRu[key] || getItem(key)?.name || key || 'Неизвестный предмет';
+  return getItem(key)?.nameRu || itemNameRu[key] || getItem(key)?.name || key || 'Неизвестный предмет';
+}
+
+export function normalizeSearch(value = '') {
+  return String(value).toLowerCase().replace(/ё/g, 'е').replace(/[«»„“”"'_()\-–—]/g, ' ').replace(/[^a-zа-я0-9%+.\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function matchesSearch(searchText, query) {
+  const normalized = normalizeSearch(query);
+  if (!normalized) return true;
+  const haystack = normalizeSearch(searchText);
+  return normalized.split(' ').every((token) => haystack.includes(token));
 }
 
 export function getItemColor(key) {
@@ -101,10 +112,22 @@ export function getItemColor(key) {
 
 export function getSprite(key) {
   const item = getItem(key);
-  if (!item) return null;
+  if (!item || item.sprite == null) return null;
   const coordinates = catalog.sprites[item.sprite];
   const sheet = catalog.sheets[coordinates[0]];
   return { coordinates, sheet };
+}
+
+export function getNamedSprite(icon) {
+  const spriteIndex = catalog.namedSprites?.[icon];
+  if (spriteIndex == null) return null;
+  const coordinates = catalog.sprites[spriteIndex];
+  const sheet = catalog.sheets[coordinates[0]];
+  return { coordinates, sheet };
+}
+
+export function getSourceName(source) {
+  return source?.nameRu || source?.name || 'Неизвестный источник';
 }
 
 export function getCategoryLabel(category) {
@@ -133,8 +156,8 @@ function normalizeRecipe(recipe, index) {
     color: getItemColor(recipe.result),
     stage: milestoneStages[result?.milestone] ?? 0,
     station: recipe.stations.map(getStationLabel).join(' / '),
-    description: result?.tooltip || `Рецепт создания предмета «${getItemName(recipe.result)}».`,
-    searchText: `${getItemName(recipe.result)} ${result?.name || ''} ${recipe.stations.map(getStationLabel).join(' ')} ${recipe.ingredients.map((ingredient) => ingredient.group ? getGroupLabel(ingredient.group) : getItemName(ingredient.item)).join(' ')}`.toLowerCase(),
+    description: result?.tooltipRu || `Рецепт создания предмета «${getItemName(recipe.result)}». Все ингредиенты и условия указаны ниже.`,
+    searchText: normalizeSearch(`${getItemName(recipe.result)} ${result?.name || ''} ${recipe.result} ${recipe.stations.map(getStationLabel).join(' ')} ${recipe.ingredients.map((ingredient) => ingredient.group ? getGroupLabel(ingredient.group) : getItemName(ingredient.item)).join(' ')}`),
     ingredients: recipe.ingredients.map((ingredient) => {
       const group = ingredient.group || null;
       const key = ingredient.item || null;
@@ -160,6 +183,85 @@ export const recipesByResult = allGameRecipes.reduce((map, recipe) => {
 }, {});
 
 export const allCraftableItems = Object.keys(recipesByResult).map((key) => recipesByResult[key][0]);
+
+export const obtainLabels = {
+  crafted: 'Создаётся', vendor: 'Продаётся у NPC', drop: 'Дроп с противников',
+  loot: 'Сундуки и горшки', plunder: 'Собирается в мире', 'shaking-tree': 'Встряхивание деревьев',
+  bag: 'Ящики и наборы', 'treasure-bag': 'Мешки боссов', fishing: 'Рыбалка',
+  'quest-reward': 'Награда Рыбака', 'strange-plant': 'Обмен странных растений',
+  caught: 'Ловля сачком', recorded: 'Запись музыкальной шкатулкой', extractinator: 'Экстрактинатор',
+  'extractinator-regular': 'Экстрактинатор', 'chlorophyte-extractinator': 'Хлорофитовый экстрактинатор',
+  shimmer: 'Преобразование в Мерцании', 'player-death': 'После смерти персонажа',
+  toilet: 'Особый способ', other: 'Другой способ', unobtainable: 'Недоступно в обычной игре',
+};
+
+export const biomeLabels = {
+  'forest-surface': 'Лес и поверхность', underground: 'Подземелье и пещеры', desert: 'Пустыня',
+  snow: 'Снежный биом', jungle: 'Джунгли', 'jungle-temple': 'Храм джунглей', corruption: 'Искажение',
+  crimson: 'Багрянец', hallow: 'Освящение', ocean: 'Океан', dungeon: 'Данж', underworld: 'Ад',
+  space: 'Космос', 'glowing-mushroom': 'Светящийся грибной биом',
+  'granite-marble': 'Гранитные и мраморные пещеры', 'spider-nest': 'Паучье гнездо',
+  graveyard: 'Кладбище', meteorite: 'Метеорит',
+};
+
+export const eventLabels = {
+  'goblin-army': 'Армия гоблинов', 'pirate-invasion': 'Пиратское вторжение',
+  'frost-legion': 'Легион мороза', 'martian-madness': 'Марсианское безумие',
+  'old-ones-army': 'Армия Древних', 'blood-moon': 'Кровавая луна', 'solar-eclipse': 'Солнечное затмение',
+  'pumpkin-moon': 'Тыквенная луна', 'frost-moon': 'Морозная луна', 'lunar-events': 'Лунные события',
+  rain: 'Дождь', 'windy-day': 'Ветреный день', sandstorm: 'Песчаная буря', blizzard: 'Метель',
+  party: 'Вечеринка', 'lantern-night': 'Ночь фонариков', halloween: 'Хэллоуин', christmas: 'Рождество',
+};
+
+export const conditionLabels = {
+  day: 'Днём', night: 'Ночью', hardmode: 'В хардмоде', 'after-any-mech': 'После любого механического босса',
+  'after-all-mechs': 'После всех механических боссов', 'after-plantera': 'После Плантеры',
+  'after-golem': 'После Голема', 'after-martian-madness': 'После Марсианского безумия',
+  'after-frost-legion': 'После Легиона мороза', 'after-clown': 'После победы над Клоуном',
+  'moon-1': 'Полнолуние', 'moon-2': 'Убывающая луна', 'moon-3': 'Третья четверть',
+  'moon-4': 'Убывающий серп', 'moon-5': 'Новолуние', 'moon-6': 'Растущий серп',
+  'moon-7': 'Первая четверть', 'moon-8': 'Растущая луна', windy: 'Ветер от 20 миль/ч',
+  'bestiary-10': 'Бестиарий заполнен на 10%', 'bestiary-15': 'Бестиарий заполнен на 15%',
+  'bestiary-20': 'Бестиарий заполнен на 20%', 'bestiary-25': 'Бестиарий заполнен на 25%',
+  'bestiary-30': 'Бестиарий заполнен на 30%', 'bestiary-40': 'Бестиарий заполнен на 40%',
+  'bestiary-50': 'Бестиарий заполнен на 50%', 'bestiary-60': 'Бестиарий заполнен на 60%',
+  'bestiary-70': 'Бестиарий заполнен на 70%', 'bestiary-80': 'Бестиарий заполнен на 80%',
+  'bestiary-90': 'Бестиарий заполнен на 90%', 'bestiary-100': 'Бестиарий заполнен на 100%',
+};
+
+export const allItemKeys = Object.keys(gameItems).sort((a, b) => getItemName(a).localeCompare(getItemName(b), 'ru'));
+const itemSearchCache = new Map();
+export function getItemSearchText(key) {
+  if (itemSearchCache.has(key)) return itemSearchCache.get(key);
+  const item = getItem(key);
+  if (!item) return normalizeSearch(key);
+  const sourceNames = (catalog.drops[key] || []).map((drop) => getSourceName(catalog.sources[drop.source]));
+  const vendorNames = (catalog.shops[key] || []).map((shop) => getSourceName(catalog.vendors[shop.vendor]));
+  const text = normalizeSearch([
+    getItemName(key), item.name, key, ...(item.categories || []).map(getCategoryLabel),
+    ...(item.obtain || []).map((id) => obtainLabels[id] || id),
+    ...(item.biomes || []).map((id) => biomeLabels[id] || id),
+    ...(item.events || []).map((id) => eventLabels[id] || id), ...sourceNames, ...vendorNames,
+  ].join(' '));
+  itemSearchCache.set(key, text);
+  return text;
+}
+
+export function getItemStage(key) {
+  return milestoneStages[getItem(key)?.milestone] ?? 0;
+}
+
+export function isItemVisible(key, currentStageIndex, spoilerFree) {
+  return !spoilerFree || getItemStage(key) <= currentStageIndex;
+}
+
+export const townNpcs = catalog.npcs || [];
+export const otherTownNpcs = catalog.otherNpcs || [];
+export const npcById = Object.fromEntries([...townNpcs, ...otherTownNpcs].map((npc) => [npc.id, npc]));
+export function getNpcName(id) {
+  const npc = npcById[id];
+  return npc?.nameRu || npc?.name || id;
+}
 
 export const defaultResourceKeys = ['Wood', 'StoneBlock', 'Gel', 'Torch', 'IronBar', 'Lens', 'FallenStar', 'Cobweb', 'SandBlock', 'Glass', 'Silk', 'HellstoneBar'];
 

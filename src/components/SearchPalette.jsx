@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, FileText, Map, Search, Sparkles } from 'lucide-react';
 import { useGame } from '../context';
-import { guideStories, obtainItems, stages } from '../data';
-import { allGameRecipes, getCategoryLabel, obtainItemKeys } from '../gameData';
+import { guideStories, stages } from '../data';
+import {
+  allItemKeys, getCategoryLabel, getItem, getItemColor, getItemName, getItemSearchText,
+  getRecipesForItem, isItemVisible, matchesSearch, normalizeSearch, obtainLabels, townNpcs, otherTownNpcs, getNpcName,
+} from '../gameData';
 import { EmptyState, ItemIcon, Modal } from './UI';
-import TerrariaIcon from './TerrariaIcon';
+import TerrariaIcon, { NamedSprite } from './TerrariaIcon';
 import StageIcon from './StageIcon';
 
-const popular = new Set(['WorkBench', 'WoodenSword', 'IronPickaxe', 'MoltenPickaxe']);
+const popular = new Set(['WorkBench', 'WoodenSword', 'IronPickaxe', 'MoltenPickaxe', 'Zenith', 'Aglet', 'HermesBoots']);
 
 export default function SearchPalette() {
   const { setSearchOpen, setModal, navigate, currentStageIndex, spoilerFree, journal } = useGame();
@@ -16,12 +19,30 @@ export default function SearchPalette() {
   useEffect(() => { window.setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
   const entries = useMemo(() => {
-    const craftEntries = allGameRecipes
-      .filter((item) => !spoilerFree || item.stage <= currentStageIndex)
-      .map((item) => ({ id: item.id, kind: 'recipe', itemKey: item.result, popular: popular.has(item.result), title: item.name, subtitle: `Рецепт · ${getCategoryLabel(item.category)}`, color: item.color, keywords: item.searchText, action: () => setModal({ type: 'recipe', item }) }));
-    const obtainEntries = obtainItems
-      .filter((item) => !spoilerFree || item.stage <= currentStageIndex)
-      .map((item) => ({ id: item.id, kind: 'obtain', itemKey: obtainItemKeys[item.id], popular: true, title: item.name, subtitle: `Как получить · ${item.biome}`, color: item.color, keywords: item.source, action: () => setModal({ type: 'obtain', item }) }));
+    const itemEntries = allItemKeys
+      .filter((key) => isItemVisible(key, currentStageIndex, spoilerFree))
+      .map((key) => {
+        const item = getItem(key);
+        const recipe = getRecipesForItem(key)[0];
+        const methods = (item.obtain || []).slice(0, 2).map((id) => obtainLabels[id] || id).join(' · ');
+        return {
+          id: key, kind: recipe ? 'recipe' : 'item', itemKey: key, popular: popular.has(key),
+          title: getItemName(key), subtitle: recipe ? `Рецепт · ${getCategoryLabel(recipe.category)}` : `Предмет · ${methods || getCategoryLabel(item.categories?.[0])}`,
+          color: getItemColor(key), keywords: getItemSearchText(key),
+          action: () => recipe ? setModal({ type: 'recipe', item: recipe }) : setModal({ type: 'item', itemKey: key }),
+        };
+      });
+    const npcEntries = townNpcs.map((npc) => ({
+      id: npc.id, kind: 'npc', npcIcon: npc.icon, popular: npc.id === 'guide',
+      title: getNpcName(npc.id), subtitle: `Все NPC · ${npc.role}`, color: '#c4a7ff',
+      keywords: `${npc.name} ${npc.role} ${Object.values(npc.neighbors).flat().map(getNpcName).join(' ')}`,
+      action: () => { navigate('npcs'); window.setTimeout(() => document.getElementById(`npc-${npc.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); },
+    }));
+    const otherNpcEntries = otherTownNpcs.map((npc) => ({
+      id: npc.id, kind: 'npc', npcIcon: npc.icon, popular: false,
+      title: npc.nameRu, subtitle: `Гости и питомцы · ${npc.role}`, color: '#70e4c1',
+      keywords: `${npc.name} ${npc.role}`, action: () => navigate('npcs'),
+    }));
     const stageEntries = stages
       .filter((_, index) => index <= currentStageIndex)
       .map((item) => ({ id: item.id, kind: 'stage', stageId: item.id, popular: true, title: item.title, subtitle: `Путь мира · Глава ${item.roman}`, color: item.color, keywords: item.boss, action: () => navigate('path') }));
@@ -29,27 +50,34 @@ export default function SearchPalette() {
       .filter((item) => item.stage <= currentStageIndex)
       .map((item) => ({ id: item.id, kind: 'interface', icon: 'book', popular: true, title: item.title, subtitle: 'История Гида', color: '#c4a7ff', keywords: item.quote, action: () => navigate('stories') }));
     const journalEntries = journal.map((item) => ({ id: item.id, kind: 'interface', icon: 'journal', popular: true, title: item.title, subtitle: `Дневник · День ${item.day}`, color: '#e3c494', keywords: item.text, action: () => navigate('journal') }));
-    return [...craftEntries, ...obtainEntries, ...stageEntries, ...storyEntries, ...journalEntries];
+    return [...itemEntries, ...npcEntries, ...otherNpcEntries, ...stageEntries, ...storyEntries, ...journalEntries];
   }, [currentStageIndex, journal, navigate, setModal, spoilerFree]);
 
-  const normalized = query.trim().toLowerCase();
-  const results = entries.filter((entry) => normalized ? `${entry.title} ${entry.subtitle} ${entry.keywords}`.toLowerCase().includes(normalized) : entry.popular).slice(0, 9);
+  const normalized = normalizeSearch(query);
+  const results = entries.filter((entry) => normalized ? matchesSearch(`${entry.title} ${entry.subtitle} ${entry.keywords || ''}`, query) : entry.popular)
+    .sort((a, b) => {
+      if (!normalized) return Number(b.popular) - Number(a.popular) || a.title.localeCompare(b.title, 'ru');
+      const aTitle = normalizeSearch(a.title);
+      const bTitle = normalizeSearch(b.title);
+      const score = (title) => title === normalized ? 0 : title.startsWith(normalized) ? 1 : title.includes(normalized) ? 2 : 3;
+      return score(aTitle) - score(bTitle) || a.title.localeCompare(b.title, 'ru');
+    }).slice(0, 10);
   const close = () => setSearchOpen(false);
   const choose = (entry) => { setSearchOpen(false); entry.action(); };
 
   return (
     <Modal onClose={close} label="Поиск по летописи" className="search-modal">
-      <div className="search-palette__input"><Search size={22} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Любой предмет, босс, история…" /><kbd>ESC</kbd></div>
-      <div className="search-palette__caption"><span>{normalized ? `Результаты поиска · показано ${results.length}` : 'Быстрый путь к нужной странице'}</span><span><Sparkles size={13} /> Полная база · по твоему прогрессу</span></div>
+      <div className="search-palette__input"><Search size={22} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Зенит, любой предмет, босс или история…" /><kbd>ESC</kbd></div>
+      <div className="search-palette__caption"><span>{normalized ? `Результаты поиска · показано ${results.length}` : 'Быстрый путь к нужной странице'}</span><span><Sparkles size={13} /> {allItemKeys.length.toLocaleString('ru-RU')} предметов · русский и английский</span></div>
       <div className="search-palette__results">
         {results.map((entry) => (
           <button key={`${entry.kind}-${entry.id}`} onClick={() => choose(entry)}>
-            {entry.kind === 'recipe' || entry.kind === 'obtain' ? <TerrariaIcon itemKey={entry.itemKey} /> : entry.kind === 'stage' ? <StageIcon stageId={entry.stageId} color={entry.color} /> : <ItemIcon icon={entry.icon} color={entry.color} />}
+            {entry.kind === 'recipe' || entry.kind === 'item' ? <TerrariaIcon itemKey={entry.itemKey} /> : entry.kind === 'npc' ? <span className="search-npc-icon"><NamedSprite icon={entry.npcIcon} label={entry.title} size={39} /></span> : entry.kind === 'stage' ? <StageIcon stageId={entry.stageId} color={entry.color} /> : <ItemIcon icon={entry.icon} color={entry.color} />}
             <span><strong>{entry.title}</strong><small>{entry.subtitle}</small></span>
             <ArrowRight size={16} />
           </button>
         ))}
-        {results.length === 0 && <EmptyState icon="compass" title="Ничего не найдено" text="Попробуй более короткий запрос или английское название предмета." />}
+        {results.length === 0 && <EmptyState icon="compass" title="Ничего не найдено" text="Попробуй более короткий запрос, русское или английское название предмета." />}
       </div>
       <div className="search-palette__footer"><span><Map size={13} /> Путь мира</span><span><BookOpen size={13} /> Истории</span><span><FileText size={13} /> Дневник</span><kbd>CTRL K</kbd></div>
     </Modal>

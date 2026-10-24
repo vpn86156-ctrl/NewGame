@@ -4,7 +4,7 @@ import { createInitialInventory, migrateInventory } from './gameData';
 import { useLocalStorage } from './hooks';
 
 const GameContext = createContext(null);
-const validViews = ['home', 'path', 'resources', 'crafts', 'obtain', 'stories', 'journal'];
+const validViews = ['home', 'path', 'resources', 'crafts', 'obtain', 'npcs', 'stories', 'journal'];
 const initialProgress = ['awakening', 'king-slime'];
 
 function getInitialView() {

@@ -1,31 +1,40 @@
-import { getItemColor, getItemName, getSprite } from '../gameData';
+import { getItemColor, getItemName, getNamedSprite, getSourceName, getSprite } from '../gameData';
 
 const pixelSizes = { sm: 23, md: 32, lg: 42, xl: 55, hero: 88 };
 
-export function GameSprite({ itemKey, size = 32, className = '' }) {
-  const sprite = getSprite(itemKey);
-  if (!sprite) return <span className={`game-sprite game-sprite--missing ${className}`} style={{ width: size, height: size }} aria-label={getItemName(itemKey)} />;
+export function AtlasSprite({ sprite, label, size = 32, className = '' }) {
+  if (!sprite) return <span className={`game-sprite game-sprite--missing ${className}`} style={{ width: size, height: size }} aria-label={label} />;
   const { coordinates, sheet } = sprite;
   const [, x, y, width, height] = coordinates;
   const scale = Math.min(size / width, size / height);
   const shownWidth = Math.max(1, Math.round(width * scale));
   const shownHeight = Math.max(1, Math.round(height * scale));
-  const sheetWidth = sheet.w * scale;
-  const sheetHeight = sheet.h * scale;
   return (
     <span
       className={`game-sprite ${className}`}
       role="img"
-      aria-label={getItemName(itemKey)}
+      aria-label={label}
       style={{
         width: shownWidth,
         height: shownHeight,
         backgroundImage: `url("${sheet.file}")`,
-        backgroundSize: `${sheetWidth}px ${sheetHeight}px`,
+        backgroundSize: `${sheet.w * scale}px ${sheet.h * scale}px`,
         backgroundPosition: `-${x * scale}px -${y * scale}px`,
       }}
     />
   );
+}
+
+export function GameSprite({ itemKey, size = 32, className = '' }) {
+  return <AtlasSprite sprite={getSprite(itemKey)} label={getItemName(itemKey)} size={size} className={className} />;
+}
+
+export function NamedSprite({ icon, label, size = 32, className = '' }) {
+  return <AtlasSprite sprite={getNamedSprite(icon)} label={label || icon} size={size} className={className} />;
+}
+
+export function SourceSprite({ source, size = 40, className = '' }) {
+  return <NamedSprite icon={source?.icon} label={getSourceName(source)} size={size} className={className} />;
 }
 
 export default function TerrariaIcon({ itemKey, size = 'md', className = '', noSlot = false }) {

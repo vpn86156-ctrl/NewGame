@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context';
 import {
-  allGameRecipes, allIngredientKeys, defaultResourceKeys, getIngredientCount, getItem,
+  allGameRecipes, allItemKeys, defaultResourceKeys, getIngredientCount, getItem,
   getItemColor, getItemName, getRecipeStatus, getRecipesForItem, getStationLabel, isRecipeVisible,
-  recipesByResult,
+  matchesSearch, recipesByResult,
 } from '../gameData';
 import { EmptyState, PageHeader, Reveal } from '../components/UI';
 import TerrariaIcon, { GameSprite } from '../components/TerrariaIcon';
@@ -33,13 +33,12 @@ export default function Resources() {
   }), [inventory]);
   const selectedRecipes = useMemo(() => allGameRecipes.filter((recipe) => recipe.ingredients.some((ingredient) => ingredient.options.includes(selected))), [selected]);
   const visibleRecipes = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
     return selectedRecipes.filter((recipe) => {
       if (!isRecipeVisible(recipe, currentStageIndex, spoilerFree)) return false;
       const status = getRecipeStatus(recipe, inventory);
       if (onlyReady && !status.ready) return false;
       if (resourceGroup === 'almost' && (!status.hasSomething || status.ready)) return false;
-      return !normalized || recipe.searchText.includes(normalized);
+      return matchesSearch(recipe.searchText, query);
     }).sort((a, b) => {
       const aStatus = getRecipeStatus(a, inventory);
       const bStatus = getRecipeStatus(b, inventory);
@@ -53,10 +52,9 @@ export default function Resources() {
   const safePage = Math.min(page, pageCount);
   const pageRecipes = visibleRecipes.slice((safePage - 1) * RECIPES_PER_PAGE, safePage * RECIPES_PER_PAGE);
   const totalUnits = Object.values(inventory).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
-  const resourceResults = useMemo(() => {
-    const normalized = resourceSearch.trim().toLowerCase();
-    return allIngredientKeys.filter((key) => !normalized || `${getItemName(key)} ${getItem(key)?.name || ''}`.toLowerCase().includes(normalized)).slice(0, 60);
-  }, [resourceSearch]);
+  const resourceResults = useMemo(() => allItemKeys
+    .filter((key) => matchesSearch(`${getItemName(key)} ${getItem(key)?.name || ''} ${key}`, resourceSearch))
+    .slice(0, 60), [resourceSearch]);
 
   useEffect(() => { setPage(1); }, [query, onlyReady, resourceGroup, selected, currentStageIndex, spoilerFree]);
   useEffect(() => {
@@ -76,7 +74,7 @@ export default function Resources() {
 
   return (
     <div className="resources-page page-stack">
-      <PageHeader eyebrow="ТВОЙ РЮКЗАК · ПОЛНАЯ БАЗА" title="Из того, что уже есть." description={`Добавь любой из ${allIngredientKeys.length.toLocaleString('ru-RU')} ингредиентов, укажи количество — и Гид проверит все ${allGameRecipes.length.toLocaleString('ru-RU')} рецептов.`}>
+      <PageHeader eyebrow="ТВОЙ РЮКЗАК · ПОЛНАЯ БАЗА" title="Из того, что уже есть." description={`Добавь любой из ${allItemKeys.length.toLocaleString('ru-RU')} предметов Terraria, укажи количество — и Гид проверит все ${allGameRecipes.length.toLocaleString('ru-RU')} рецептов.`}>
         <button className="button button--primary" onClick={scrollToRecipes}><Sparkles size={16} />Показать готовые крафты<span className="button-badge">{readyCount}</span></button>
       </PageHeader>
 
@@ -92,13 +90,13 @@ export default function Resources() {
           <div className="panel-heading"><div><span className="eyebrow">01 / ТВОИ РЕСУРСЫ</span><h2>Что в рюкзаке?</h2></div><button className="icon-button" onClick={clearInventory} aria-label="Обнулить количество ресурсов" title="Обнулить количество"><RotateCcw size={16} /></button></div>
           <p className="panel-description">Выбери ресурс. Справа появятся все рецепты, где он нужен.</p>
           <div className="resource-add-wrap">
-            <button className={`button button--soft button--full resource-add-button ${pickerOpen ? 'is-active' : ''}`} onClick={() => setPickerOpen(!pickerOpen)}>{pickerOpen ? <X size={16} /> : <PackagePlus size={16} />}{pickerOpen ? 'Закрыть поиск ресурсов' : 'Добавить любой ресурс'}</button>
+            <button className={`button button--soft button--full resource-add-button ${pickerOpen ? 'is-active' : ''}`} onClick={() => setPickerOpen(!pickerOpen)}>{pickerOpen ? <X size={16} /> : <PackagePlus size={16} />}{pickerOpen ? 'Закрыть поиск предметов' : 'Добавить любой предмет'}</button>
             {pickerOpen && (
               <div className="resource-picker">
-                <label><Search size={15} /><input autoFocus value={resourceSearch} onChange={(event) => setResourceSearch(event.target.value)} placeholder="Например, кость или Bone…" /></label>
+                <label><Search size={15} /><input autoFocus value={resourceSearch} onChange={(event) => setResourceSearch(event.target.value)} placeholder="Зенит, кость или Bone…" /></label>
                 <div className="resource-picker__results">
                   {resourceResults.map((key) => <button key={key} onClick={() => addResource(key)}><GameSprite itemKey={key} size={24} /><span><strong>{getItemName(key)}</strong><small>{getItem(key)?.name}</small></span>{inventory[key] > 0 && <b>{inventory[key]}</b>}<Plus size={14} /></button>)}
-                  {resourceResults.length === 0 && <p>Такого ингредиента нет. Попробуй английское название.</p>}
+                  {resourceResults.length === 0 && <p>Такого предмета нет. Попробуй русское или английское название.</p>}
                 </div>
               </div>
             )}
@@ -147,7 +145,11 @@ export default function Resources() {
               );
             })}
           </div>
-          {visibleRecipes.length === 0 && <EmptyState icon="workbench" title={onlyReady ? 'Пока не хватает ресурсов' : 'Рецептов не найдено'} text={onlyReady ? 'Добавь недостающие ингредиенты или покажи все рецепты — Гид подскажет, чего не хватает.' : 'Попробуй другой запрос или выбери другой ресурс.'} action={<button className="button button--soft" onClick={() => { setOnlyReady(false); setResourceGroup('all'); setQuery(''); }}>Показать все рецепты</button>} />}
+          {visibleRecipes.length === 0 && (selectedRecipes.length === 0 ? (
+            <EmptyState icon="compass" title="Не используется в рецептах" text={`${getItemName(selected)} можно хранить в рюкзаке, но сейчас этот предмет не требуется ни для одного крафта. В карточке есть способы получения.`} action={<button className="button button--soft" onClick={() => setModal({ type: 'item', itemKey: selected })}>Как получить этот предмет <ChevronRight size={15} /></button>} />
+          ) : (
+            <EmptyState icon="workbench" title={onlyReady ? 'Пока не хватает ресурсов' : 'Рецептов не найдено'} text={onlyReady ? 'Добавь недостающие ингредиенты или покажи все рецепты — Гид подскажет, чего не хватает.' : 'Попробуй другой запрос или выбери другой ресурс.'} action={<button className="button button--soft" onClick={() => { setOnlyReady(false); setResourceGroup('all'); setQuery(''); }}>Показать все рецепты</button>} />
+          ))}
           {pageCount > 1 && <div className="resource-pagination"><button className="button button--ghost" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>Назад</button><span>Страница {safePage} / {pageCount}</span><button className="button button--ghost" disabled={safePage === pageCount} onClick={() => setPage(safePage + 1)}>Дальше <ArrowUpRight size={14} /></button></div>}
         </div>
       </div>
