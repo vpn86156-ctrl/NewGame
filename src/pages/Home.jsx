@@ -12,7 +12,7 @@ import StageIcon from '../components/StageIcon';
 
 const quickLinks = [
   { view: 'crafts', icon: 'workbench', color: '#d5f96f', label: 'Все крафты', text: 'Рецепты и станции', meta: '3 655 рецептов' },
-  { view: 'obtain', icon: 'compass', color: '#82d5f8', label: 'Как получить', text: 'Где искать сокровища', meta: '8 находок' },
+  { view: 'obtain', icon: 'compass', color: '#82d5f8', label: 'Как получить', text: 'Крафт, дроп и магазины', meta: '6 186 предметов' },
   { view: 'stories', icon: 'book', color: '#c4a7ff', label: 'Сюжет Terraria', text: 'Истории без спойлеров', meta: '11 глав' },
 ];
 
