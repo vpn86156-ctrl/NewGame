@@ -2,6 +2,12 @@
 
 Интерактивный фанатский спутник по Terraria на React + Vite.
 
+## Открыть сайт
+
+**[Запустить TERRA Летопись](https://htmlpreview.github.io/?https://raw.githubusercontent.com/vpn86156-ctrl/NewGame/arena/78062b9a-newgame/docs/index.html)**
+
+Опубликованная статическая версия находится в папке `docs` этой ветки.
+
 ## Возможности
 
 - последовательный путь мира с подтверждением пройденных этапов;
