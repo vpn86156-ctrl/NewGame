@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { initialJournal, resources, stages } from './data';
+import { initialJournal, stages } from './data';
+import { createInitialInventory, migrateInventory } from './gameData';
 import { useLocalStorage } from './hooks';
 
 const GameContext = createContext(null);
 const validViews = ['home', 'path', 'resources', 'crafts', 'obtain', 'stories', 'journal'];
 const initialProgress = ['awakening', 'king-slime'];
-const initialInventory = () => Object.fromEntries(resources.map((resource) => [resource.id, resource.initial]));
 
 function getInitialView() {
   const hash = window.location.hash.replace('#/', '').replace('#', '');
@@ -16,7 +16,7 @@ export function GameProvider({ children }) {
   const [view, setView] = useState(getInitialView);
   const [progress, setProgress] = useLocalStorage('terra-world-progress-v1', initialProgress);
   const [spoilerFree, setSpoilerFree] = useLocalStorage('terra-spoiler-free-v1', true);
-  const [inventory, setInventory] = useLocalStorage('terra-inventory-v1', initialInventory);
+  const [inventory, setInventory] = useLocalStorage('terra-inventory-v1', createInitialInventory);
   const [journal, setJournal] = useLocalStorage('terra-journal-v1', initialJournal);
   const [favorites, setFavorites] = useLocalStorage('terra-favorite-recipes-v1', []);
   const [challengeAccepted, setChallengeAccepted] = useLocalStorage('terra-challenge-v1', false);
@@ -31,6 +31,10 @@ export function GameProvider({ children }) {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  useEffect(() => {
+    setInventory((current) => migrateInventory(current));
+  }, [setInventory]);
 
   const currentStageIndex = useMemo(() => {
     const firstOpen = stages.findIndex((stage) => !progress.includes(stage.id));

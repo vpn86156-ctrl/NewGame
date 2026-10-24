@@ -6,6 +6,7 @@ import {
 import { useGame } from '../context';
 import { guideStories, stages } from '../data';
 import { CheckLine, ItemIcon, PageHeader, PixelGuide, ProgressRing, Reveal } from '../components/UI';
+import StageIcon from '../components/StageIcon';
 
 export default function Path() {
   const { progress, currentStageIndex, currentStage, allComplete, spoilerFree, setModal, showToast, navigate } = useGame();
@@ -82,7 +83,7 @@ export default function Path() {
                   onClick={() => selectStage(stage, index)} style={{ '--stage-color': stage.color }} aria-current={active ? 'step' : undefined}
                 >
                   <span className="timeline-card__number">{hidden ? '??' : stage.roman}</span>
-                  <ItemIcon icon={hidden ? 'shield' : stage.icon} color={hidden ? '#64716c' : stage.color} />
+                  {hidden ? <ItemIcon icon="shield" color="#64716c" /> : <StageIcon stageId={stage.id} color={stage.color} />}
                   <span className="timeline-card__copy">
                     <small>{hidden ? 'НЕИЗВЕСТНАЯ ГЛАВА' : stage.era}</small>
                     <strong>{hidden ? 'Продолжай путь…' : stage.title}</strong>
@@ -100,7 +101,7 @@ export default function Path() {
           <div className="stage-detail__ambient" style={{ '--stage-color': selected.color }} />
           <div className="stage-detail__header">
             <div className="stage-detail__identity">
-              <ItemIcon icon={selected.icon} color={selected.color} size="xl" />
+              <StageIcon stageId={selected.id} color={selected.color} size="xl" />
               <div><span className="eyebrow">ГЛАВА {selected.roman} · {selected.era}</span><h2>{selected.title}</h2></div>
             </div>
             <span className={`stage-status ${selectedComplete ? 'stage-status--done' : 'stage-status--current'}`}>
@@ -110,7 +111,7 @@ export default function Path() {
           <p className="stage-detail__lead">{selected.description}</p>
 
           <div className="boss-objective" style={{ '--stage-color': selected.color }}>
-            <span className="boss-objective__icon"><ItemIcon icon={selected.icon} color={selected.color} size="lg" /></span>
+            <span className="boss-objective__icon"><StageIcon stageId={selected.id} color={selected.color} size="lg" /></span>
             <div><small>ЦЕЛЬ ЭТАПА</small><strong>{selected.boss}</strong><span>{selected.objective}</span></div>
             <ItemIcon icon="trophy" color={selected.color} size="sm" />
           </div>

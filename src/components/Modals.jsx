@@ -4,8 +4,11 @@ import {
   Dices, Feather, Heart, Lightbulb, MapPin, Plus, Sparkles, Trash2, Trophy,
 } from 'lucide-react';
 import { useGame } from '../context';
-import { resourceById, stages, worldTasks } from '../data';
-import { CheckLine, ItemIcon, Modal, PixelGuide } from './UI';
+import { worldTasks } from '../data';
+import { getCategoryLabel, getIngredientCount, getItem, getItemName, getRecipesForItem, obtainItemKeys } from '../gameData';
+import { ItemIcon, Modal } from './UI';
+import TerrariaIcon from './TerrariaIcon';
+import StageIcon from './StageIcon';
 
 function ModalTitle({ eyebrow, title, children }) {
   return <div className="modal-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{children}</div>;
@@ -13,28 +16,43 @@ function ModalTitle({ eyebrow, title, children }) {
 
 function RecipeModal({ item }) {
   const { inventory, navigate, setModal, favorites, toggleFavorite } = useGame();
-  const favorite = favorites.includes(item.id);
+  const [activeRecipe, setActiveRecipe] = useState(item);
+  const variants = getRecipesForItem(item.result);
+  const favorite = favorites.includes(activeRecipe.id);
   return (
-    <Modal onClose={() => setModal(null)} label={`Рецепт: ${item.name}`} className="item-modal">
-      <div className="item-modal__hero" style={{ '--item-accent': item.color }}>
-        <ItemIcon icon={item.icon} color={item.color} size="xl" />
-        <div><span className="eyebrow">{item.category} · РЕЦЕПТ</span><h2>{item.name}{item.output > 1 && <small> ×{item.output}</small>}</h2></div>
-        <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label="Избранное"><Heart size={19} fill={favorite ? 'currentColor' : 'none'} /></button>
+    <Modal onClose={() => setModal(null)} label={`Рецепт: ${activeRecipe.name}`} className="item-modal">
+      <div className="item-modal__hero" style={{ '--item-accent': activeRecipe.color }}>
+        <TerrariaIcon itemKey={activeRecipe.result} size="xl" />
+        <div><span className="eyebrow">{getCategoryLabel(activeRecipe.category)} · РЕЦЕПТ</span><h2>{activeRecipe.name}{activeRecipe.output > 1 && <small> ×{activeRecipe.output}</small>}</h2>{activeRecipe.name !== activeRecipe.englishName && <span className="item-modal__english">{activeRecipe.englishName}</span>}</div>
+        <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(activeRecipe.id)} aria-label="Избранное"><Heart size={19} fill={favorite ? 'currentColor' : 'none'} /></button>
       </div>
-      <p className="item-modal__description">{item.description}</p>
+      <p className="item-modal__description">{activeRecipe.description}</p>
+      {variants.length > 1 && <div className="modal-section recipe-variants"><span className="eyebrow">СПОСОБЫ СОЗДАНИЯ · {variants.length}</span><div>{variants.map((recipe, index) => <button key={recipe.id} className={activeRecipe.id === recipe.id ? 'is-active' : ''} onClick={() => setActiveRecipe(recipe)}><TerrariaIcon itemKey={recipe.result} size="sm" /><span><strong>Вариант {index + 1}</strong><small>{recipe.station}</small></span>{activeRecipe.id === recipe.id && <Check size={15} />}</button>)}</div></div>}
       <div className="modal-section"><span className="eyebrow">ПОНАДОБИТСЯ</span><div className="modal-ingredients">
-        {Object.entries(item.ingredients).map(([id, amount]) => {
-          const resource = resourceById[id];
-          const have = inventory[id] || 0;
-          return <div key={id}><ItemIcon icon={resource.icon} color={resource.color} /><span><strong>{resource.name}</strong><small className={have >= amount ? 'has-enough' : 'not-enough'}>В рюкзаке: {have}</small></span><b>×{amount}</b></div>;
+        {activeRecipe.ingredients.map((ingredient) => {
+          const have = getIngredientCount(inventory, ingredient);
+          const enough = have >= ingredient.amount;
+          return <div key={`${ingredient.group || ingredient.key}-${ingredient.amount}`} className="modal-ingredient"><div className="modal-ingredient__main"><TerrariaIcon itemKey={ingredient.iconKey} /><span><strong>{ingredient.name}</strong><small className={enough ? 'has-enough' : 'not-enough'}>{ingredient.group ? `Лучший вариант в рюкзаке: ${have}` : `В рюкзаке: ${have}`}</small></span><b>×{ingredient.amount}</b></div>{ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length})</summary><div>{ingredient.options.map((key) => <span key={key} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b></span>)}</div></details>}</div>;
         })}
       </div></div>
-      <div className="station-note"><ItemIcon icon="workbench" color="#d5f96f" size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{item.station}</strong></div></div>
-      <div className="guide-practical-hint"><span><Lightbulb size={18} /></span><div><small>МАЛЕНЬКИЙ СОВЕТ</small><p>{item.tip}</p></div></div>
+      <div className="station-note"><TerrariaIcon itemKey={getStationIcon(activeRecipe.stations[0])} size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{activeRecipe.station}</strong></div></div>
+      {activeRecipe.platforms?.some((platform) => !['desktop', 'console', 'mobile'].includes(platform)) && <div className="recipe-platform-note">Рецепт с платформенными ограничениями: {activeRecipe.platforms.join(', ')}</div>}
       <div className="modal-actions"><button className="button button--soft" onClick={() => { setModal(null); navigate('resources'); }}><Backpack size={17} /> Проверить ресурсы</button><button className="button button--primary" onClick={() => setModal(null)}>Понятно <Check size={17} /></button></div>
     </Modal>
   );
 }
+
+function getStationIcon(station) {
+  const key = stationIcons[station];
+  return getItem(key) ? key : 'WorkBench';
+}
+
+const stationIcons = {
+  'Work Bench': 'WorkBench', Furnace: 'Furnace', 'Iron Anvil': 'IronAnvil', 'Mythril Anvil': 'MythrilAnvil',
+  'Adamantite Forge': 'AdamantiteForge', "Tinkerer's Workshop": 'TinkerersWorkshop', Loom: 'Loom', Sawmill: 'Sawmill',
+  Hellforge: 'Hellforge', 'Demon Altar': 'DemonAltar', 'Ancient Manipulator': 'AncientManipulator', Campfire: 'Campfire',
+  'Crystal Ball': 'CrystalBall', 'Cooking Pot': 'CookingPot', 'Placed Bottle': 'Bottle', 'Heavy Assembler': 'HeavyAssembler',
+};
 
 function ObtainModal({ item }) {
   const { setModal, favorites, toggleFavorite } = useGame();
@@ -42,7 +60,7 @@ function ObtainModal({ item }) {
   return (
     <Modal onClose={() => setModal(null)} label={`Как получить: ${item.name}`} className="item-modal">
       <div className="item-modal__hero" style={{ '--item-accent': item.color }}>
-        <ItemIcon icon={item.icon} color={item.color} size="xl" />
+        <TerrariaIcon itemKey={obtainItemKeys[item.id]} size="xl" />
         <div><span className="eyebrow">{item.category} · ГАЙД ПО ПОИСКУ</span><h2>{item.name}</h2></div>
         <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label="Избранное"><Heart size={19} fill={favorite ? 'currentColor' : 'none'} /></button>
       </div>
@@ -62,7 +80,7 @@ function CompleteStageModal({ stage }) {
       <div className="confirm-modal__emblem"><Trophy size={32} /></div>
       <ModalTitle eyebrow={`ГЛАВА ${stage.roman} · ПОБЕДА`} title="Записать в летопись?" />
       <p>Подтверди, что цель этапа выполнена. Следующая карточка откроется сразу после этого.</p>
-      <div className="confirm-objective"><ItemIcon icon={stage.icon} color={stage.color} /><div><small>{stage.boss}</small><strong>{stage.objective}</strong></div></div>
+      <div className="confirm-objective"><StageIcon stageId={stage.id} color={stage.color} /><div><small>{stage.boss}</small><strong>{stage.objective}</strong></div></div>
       <div className="confirm-unlock"><Sparkles size={16} /><span>Новая глава и её история станут доступны</span></div>
       <div className="modal-actions"><button className="button button--ghost" onClick={() => setModal(null)}>Ещё не сейчас</button><button className="button button--primary" onClick={() => completeStage(stage.id)}><CheckCircle2 size={18} /> Да, этап пройден</button></div>
     </Modal>

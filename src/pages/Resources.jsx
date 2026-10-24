@@ -1,157 +1,160 @@
-import { useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowRight, Backpack, Check, ChevronRight, EyeOff, Heart, Minus, Plus,
-  Search, SlidersHorizontal, Sparkles, Trash2, WandSparkles,
+  ArrowUpRight, Backpack, Check, ChevronRight, CirclePlus, EyeOff, Heart,
+  Minus, PackagePlus, Plus, RotateCcw, Search, ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import { useGame } from '../context';
-import { recipes, resourceById, resources } from '../data';
-import { EmptyState, ItemIcon, PageHeader, Reveal } from '../components/UI';
+import {
+  allGameRecipes, allIngredientKeys, defaultResourceKeys, getIngredientCount, getItem,
+  getItemColor, getItemName, getRecipeStatus, getRecipesForItem, getStationLabel, isRecipeVisible,
+  recipesByResult,
+} from '../gameData';
+import { EmptyState, PageHeader, Reveal } from '../components/UI';
+import TerrariaIcon, { GameSprite } from '../components/TerrariaIcon';
 
-const emptyInventory = () => Object.fromEntries(resources.map((resource) => [resource.id, 0]));
-const demoInventory = () => Object.fromEntries(resources.map((resource) => [resource.id, resource.initial]));
-
-function RecipeResultCard({ recipe, inventory, onOpen, favorite, onFavorite }) {
-  const ready = Object.entries(recipe.ingredients).every(([id, amount]) => (inventory[id] || 0) >= amount);
-  const missing = Object.entries(recipe.ingredients).reduce((sum, [id, amount]) => sum + Math.max(0, amount - (inventory[id] || 0)), 0);
-  return (
-    <motion.button
-      layout className={`recipe-result-card ${ready ? 'is-ready' : ''}`} onClick={onOpen}
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.25 }}
-    >
-      <ItemIcon icon={recipe.icon} color={recipe.color} size="lg" />
-      <span className="recipe-result-card__body">
-        <span className="recipe-result-card__title"><strong>{recipe.name}</strong>{recipe.output > 1 && <small>×{recipe.output}</small>}</span>
-        <span className="recipe-result-card__station">{recipe.station}</span>
-        <span className="ingredient-row">
-          {Object.entries(recipe.ingredients).map(([id, amount]) => {
-            const enough = (inventory[id] || 0) >= amount;
-            return <span key={id} className={`ingredient-pill ${enough ? 'is-enough' : 'is-missing'}`}><i style={{ background: resourceById[id]?.color }} />{resourceById[id]?.short} <b>{inventory[id] || 0}/{amount}</b></span>;
-          })}
-        </span>
-      </span>
-      <span className={`recipe-result-card__state ${ready ? 'is-ready' : ''}`}>
-        {ready ? <><Check size={13} /> МОЖНО</> : `−${missing}`}
-      </span>
-      <span
-        className={`recipe-result-card__favorite ${favorite ? 'is-favorite' : ''}`} role="button" tabIndex={0}
-        aria-label={favorite ? 'Убрать из избранного' : 'В избранное'}
-        onClick={(event) => { event.stopPropagation(); onFavorite(); }}
-        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); onFavorite(); } }}
-      ><Heart size={16} fill={favorite ? 'currentColor' : 'none'} /></span>
-      <ChevronRight className="recipe-result-card__chevron" size={17} />
-    </motion.button>
-  );
-}
+const RECIPES_PER_PAGE = 12;
 
 export default function Resources() {
-  const {
-    inventory, setInventory, updateResource, currentStageIndex, spoilerFree,
-    setModal, favorites, toggleFavorite, showToast,
-  } = useGame();
-  const [resourceQuery, setResourceQuery] = useState('');
-  const [recipeQuery, setRecipeQuery] = useState('');
-  const [tab, setTab] = useState('ready');
-  const [onlyFilled, setOnlyFilled] = useState(false);
+  const { inventory, updateResource, setInventory, currentStageIndex, spoilerFree, setModal, favorites, toggleFavorite } = useGame();
+  const [selected, setSelected] = useState('Wood');
+  const [query, setQuery] = useState('');
+  const [onlyReady, setOnlyReady] = useState(false);
+  const [resourceGroup, setResourceGroup] = useState('all');
+  const [resourceSearch, setResourceSearch] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const visibleRecipes = useMemo(() => recipes.filter((recipe) => {
-    if (spoilerFree && recipe.stage > currentStageIndex) return false;
-    return recipe.name.toLowerCase().includes(recipeQuery.toLowerCase());
-  }), [currentStageIndex, recipeQuery, spoilerFree]);
+  const inventoryKeys = useMemo(() => Object.keys(inventory).filter((key) => getItem(key)).sort((a, b) => {
+    const aDefault = defaultResourceKeys.includes(a);
+    const bDefault = defaultResourceKeys.includes(b);
+    if (aDefault !== bDefault) return aDefault ? -1 : 1;
+    if (aDefault && bDefault) return defaultResourceKeys.indexOf(a) - defaultResourceKeys.indexOf(b);
+    return getItemName(a).localeCompare(getItemName(b), 'ru');
+  }), [inventory]);
+  const selectedRecipes = useMemo(() => allGameRecipes.filter((recipe) => recipe.ingredients.some((ingredient) => ingredient.options.includes(selected))), [selected]);
+  const visibleRecipes = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return selectedRecipes.filter((recipe) => {
+      if (!isRecipeVisible(recipe, currentStageIndex, spoilerFree)) return false;
+      const status = getRecipeStatus(recipe, inventory);
+      if (onlyReady && !status.ready) return false;
+      if (resourceGroup === 'almost' && (!status.hasSomething || status.ready)) return false;
+      return !normalized || recipe.searchText.includes(normalized);
+    }).sort((a, b) => {
+      const aStatus = getRecipeStatus(a, inventory);
+      const bStatus = getRecipeStatus(b, inventory);
+      return Number(bStatus.ready) - Number(aStatus.ready) || aStatus.missing - bStatus.missing || a.name.localeCompare(b.name, 'ru');
+    });
+  }, [currentStageIndex, inventory, onlyReady, query, resourceGroup, selectedRecipes, spoilerFree]);
+  const readyCount = useMemo(() => allGameRecipes.filter((recipe) => isRecipeVisible(recipe, currentStageIndex, spoilerFree) && getRecipeStatus(recipe, inventory).ready).length, [currentStageIndex, inventory, spoilerFree]);
+  const selectedReadyCount = selectedRecipes.filter((recipe) => isRecipeVisible(recipe, currentStageIndex, spoilerFree) && getRecipeStatus(recipe, inventory).ready).length;
+  const hiddenSelected = selectedRecipes.length - selectedRecipes.filter((recipe) => isRecipeVisible(recipe, currentStageIndex, spoilerFree)).length;
+  const pageCount = Math.max(1, Math.ceil(visibleRecipes.length / RECIPES_PER_PAGE));
+  const safePage = Math.min(page, pageCount);
+  const pageRecipes = visibleRecipes.slice((safePage - 1) * RECIPES_PER_PAGE, safePage * RECIPES_PER_PAGE);
+  const totalUnits = Object.values(inventory).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+  const resourceResults = useMemo(() => {
+    const normalized = resourceSearch.trim().toLowerCase();
+    return allIngredientKeys.filter((key) => !normalized || `${getItemName(key)} ${getItem(key)?.name || ''}`.toLowerCase().includes(normalized)).slice(0, 60);
+  }, [resourceSearch]);
 
-  const withStatus = visibleRecipes.map((recipe) => {
-    const missing = Object.entries(recipe.ingredients).reduce((sum, [id, amount]) => sum + Math.max(0, amount - (inventory[id] || 0)), 0);
-    const hasSomething = Object.keys(recipe.ingredients).some((id) => (inventory[id] || 0) > 0);
-    return { recipe, missing, hasSomething };
-  });
-  const ready = withStatus.filter((item) => item.missing === 0);
-  const almost = withStatus.filter((item) => item.missing > 0 && item.missing <= 8 && item.hasSomething).sort((a, b) => a.missing - b.missing);
-  const shown = tab === 'ready' ? ready : tab === 'almost' ? almost : withStatus;
-  const filledResources = resources.filter((resource) => (inventory[resource.id] || 0) > 0).length;
-  const shownResources = resources.filter((resource) => {
-    if (onlyFilled && !(inventory[resource.id] > 0)) return false;
-    return resource.name.toLowerCase().includes(resourceQuery.toLowerCase());
-  });
+  useEffect(() => { setPage(1); }, [query, onlyReady, resourceGroup, selected, currentStageIndex, spoilerFree]);
+  useEffect(() => {
+    if (!pickerOpen) setResourceSearch('');
+  }, [pickerOpen]);
+
+  const addResource = (key) => {
+    updateResource(key, Math.max(1, inventory[key] || 0));
+    setSelected(key);
+    setPickerOpen(false);
+  };
+  const clearInventory = () => setInventory((current) => Object.fromEntries(Object.keys(current).map((key) => [key, 0])));
+  const scrollToRecipes = () => {
+    setOnlyReady(true);
+    document.getElementById('recipe-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="resources-page page-stack">
-      <PageHeader
-        eyebrow="ЧТО МОЖНО СДЕЛАТЬ ИЗ МОИХ РЕСУРСОВ?"
-        title="Рюкзак подскажет."
-        description="Отметь свою добычу — мы сравним её с рецептами и покажем, что уже можно создать."
-      >
-        <button className="button button--ghost" onClick={() => { setInventory(demoInventory()); showToast('Пример рюкзака восстановлен.', 'neutral'); }}><WandSparkles size={17} /> Демо-рюкзак</button>
+      <PageHeader eyebrow="ТВОЙ РЮКЗАК · ПОЛНАЯ БАЗА" title="Из того, что уже есть." description={`Добавь любой из ${allIngredientKeys.length.toLocaleString('ru-RU')} ингредиентов, укажи количество — и Гид проверит все ${allGameRecipes.length.toLocaleString('ru-RU')} рецептов.`}>
+        <button className="button button--primary" onClick={scrollToRecipes}><Sparkles size={16} />Показать готовые крафты<span className="button-badge">{readyCount}</span></button>
       </PageHeader>
 
-      <Reveal className="inventory-summary" delay={0.05}>
-        <div className="inventory-summary__main"><span><Backpack size={24} /></span><div><small>ТВОЙ РЮКЗАК</small><strong>{filledResources} <em>из {resources.length} ресурсов</em></strong></div></div>
-        <div className="inventory-summary__stat"><small>МОЖНО СОЗДАТЬ</small><strong>{ready.length}</strong><span>рецептов</span></div>
-        <div className="inventory-summary__stat"><small>ПОЧТИ ГОТОВО</small><strong>{almost.length}</strong><span>рецептов</span></div>
-        <div className="inventory-summary__note"><Sparkles size={16} /><span>Количество сохраняется автоматически</span></div>
-      </Reveal>
+      <div className="inventory-overview">
+        <Reveal className="inventory-overview__lead"><span className="inventory-overview__icon"><Backpack size={23} /></span><div><span>РЮКЗАК ОТКРЫТ</span><strong>{inventoryKeys.length} видов · {totalUnits.toLocaleString('ru-RU')} предметов</strong></div></Reveal>
+        <Reveal className="inventory-overview__stat" delay={0.04}><span>Можно создать сейчас</span><strong>{readyCount}<small> рецептов</small></strong></Reveal>
+        <Reveal className="inventory-overview__stat" delay={0.08}><span>Выбрано для подбора</span><strong className="inventory-selected-name"><GameSprite itemKey={selected} size={22} />{getItemName(selected)}</strong></Reveal>
+        <Reveal className="inventory-save" delay={0.12}><ShieldCheck size={17} /><span>Сохранено<br />в этом браузере</span></Reveal>
+      </div>
 
-      <div className="resources-layout">
-        <Reveal className="inventory-panel" delay={0.08}>
-          <div className="panel-heading">
-            <div><span className="eyebrow">ШАГ 01</span><h2>Что у тебя есть?</h2></div>
-            <button className="icon-button" title="Очистить рюкзак" aria-label="Очистить рюкзак" onClick={() => { setInventory(emptyInventory()); showToast('Рюкзак очищен.', 'neutral'); }}><Trash2 size={16} /></button>
-          </div>
-          <label className="field-with-icon"><Search size={16} /><input value={resourceQuery} onChange={(event) => setResourceQuery(event.target.value)} placeholder="Найти ресурс…" /></label>
-          <div className="inventory-filter">
-            <span>{shownResources.length} ресурсов</span>
-            <button className={onlyFilled ? 'is-active' : ''} onClick={() => setOnlyFilled(!onlyFilled)}><SlidersHorizontal size={13} /> Только мои</button>
-          </div>
-          <div className="resource-list">
-            {shownResources.map((resource) => (
-              <div className={`resource-counter ${inventory[resource.id] > 0 ? 'has-items' : ''}`} key={resource.id}>
-                <ItemIcon icon={resource.icon} color={resource.color} />
-                <div className="resource-counter__name"><strong>{resource.name}</strong><span>{inventory[resource.id] > 0 ? 'В рюкзаке' : 'Не добавлено'}</span></div>
-                <div className="stepper">
-                  <button onClick={() => updateResource(resource.id, (inventory[resource.id] || 0) - 1)} disabled={!inventory[resource.id]} aria-label={`Убрать: ${resource.name}`}><Minus size={14} /></button>
-                  <input
-                    aria-label={`Количество: ${resource.name}`} type="number" min="0" max="9999" value={inventory[resource.id] || 0}
-                    onChange={(event) => updateResource(resource.id, Number(event.target.value))}
-                  />
-                  <button onClick={() => updateResource(resource.id, (inventory[resource.id] || 0) + 1)} aria-label={`Добавить: ${resource.name}`}><Plus size={14} /></button>
+      <div className="resources-workspace">
+        <Reveal className="inventory-panel" delay={0.05}>
+          <div className="panel-heading"><div><span className="eyebrow">01 / ТВОИ РЕСУРСЫ</span><h2>Что в рюкзаке?</h2></div><button className="icon-button" onClick={clearInventory} aria-label="Обнулить количество ресурсов" title="Обнулить количество"><RotateCcw size={16} /></button></div>
+          <p className="panel-description">Выбери ресурс. Справа появятся все рецепты, где он нужен.</p>
+          <div className="resource-add-wrap">
+            <button className={`button button--soft button--full resource-add-button ${pickerOpen ? 'is-active' : ''}`} onClick={() => setPickerOpen(!pickerOpen)}>{pickerOpen ? <X size={16} /> : <PackagePlus size={16} />}{pickerOpen ? 'Закрыть поиск ресурсов' : 'Добавить любой ресурс'}</button>
+            {pickerOpen && (
+              <div className="resource-picker">
+                <label><Search size={15} /><input autoFocus value={resourceSearch} onChange={(event) => setResourceSearch(event.target.value)} placeholder="Например, кость или Bone…" /></label>
+                <div className="resource-picker__results">
+                  {resourceResults.map((key) => <button key={key} onClick={() => addResource(key)}><GameSprite itemKey={key} size={24} /><span><strong>{getItemName(key)}</strong><small>{getItem(key)?.name}</small></span>{inventory[key] > 0 && <b>{inventory[key]}</b>}<Plus size={14} /></button>)}
+                  {resourceResults.length === 0 && <p>Такого ингредиента нет. Попробуй английское название.</p>}
                 </div>
               </div>
-            ))}
-            {shownResources.length === 0 && <p className="small-empty">Такого ресурса пока нет в списке.</p>}
-          </div>
-        </Reveal>
-
-        <Reveal className="recipe-results-panel" delay={0.14}>
-          <div className="panel-heading recipe-results-panel__heading">
-            <div><span className="eyebrow">ШАГ 02</span><h2>Что можно создать?</h2></div>
-            <label className="field-with-icon field-with-icon--compact"><Search size={15} /><input value={recipeQuery} onChange={(event) => setRecipeQuery(event.target.value)} placeholder="Рецепт…" /></label>
-          </div>
-          <div className="segmented-tabs" role="tablist">
-            <button className={tab === 'ready' ? 'is-active' : ''} onClick={() => setTab('ready')} role="tab"><Check size={14} /> Доступно <span>{ready.length}</span></button>
-            <button className={tab === 'almost' ? 'is-active' : ''} onClick={() => setTab('almost')} role="tab">Почти хватает <span>{almost.length}</span></button>
-            <button className={tab === 'all' ? 'is-active' : ''} onClick={() => setTab('all')} role="tab">Все <span>{visibleRecipes.length}</span></button>
-          </div>
-          {spoilerFree && <div className="compact-spoiler-note"><EyeOff size={14} /> Поздние рецепты скрыты без спойлеров</div>}
-          <div className="recipe-results-list">
-            <AnimatePresence mode="popLayout">
-              {shown.map(({ recipe }) => (
-                <RecipeResultCard
-                  key={recipe.id} recipe={recipe} inventory={inventory} favorite={favorites.includes(recipe.id)}
-                  onFavorite={() => toggleFavorite(recipe.id)} onOpen={() => setModal({ type: 'recipe', item: recipe })}
-                />
-              ))}
-            </AnimatePresence>
-            {shown.length === 0 && (
-              <EmptyState
-                icon={tab === 'ready' ? 'chest' : 'compass'}
-                title={tab === 'ready' ? 'Пока не хватает материалов' : 'Ничего не найдено'}
-                text={tab === 'ready' ? 'Добавь ресурсы в рюкзак или загляни во вкладку «Почти хватает».' : 'Попробуй изменить поиск или добавить часть материалов.'}
-                action={tab === 'ready' ? <button className="button button--soft" onClick={() => setTab('almost')}>Что почти готово <ArrowRight size={16} /></button> : null}
-              />
             )}
           </div>
+          <div className="resource-list">
+            {inventoryKeys.map((key) => (
+              <div key={key} className={`resource-item ${selected === key ? 'is-selected' : ''}`} style={{ '--resource-color': getItemColor(key) }}>
+                <button className="resource-item__select" onClick={() => setSelected(key)} aria-pressed={selected === key}><TerrariaIcon itemKey={key} size="md" /><span><strong>{getItemName(key)}</strong><small>{getItem(key)?.name}</small></span></button>
+                <div className="resource-item__counter"><button onClick={() => updateResource(key, (inventory[key] || 0) - 1)} aria-label={`Убавить: ${getItemName(key)}`}><Minus size={12} /></button><input type="number" min="0" value={inventory[key] || 0} onChange={(event) => updateResource(key, event.target.value)} onFocus={() => setSelected(key)} aria-label={`Количество: ${getItemName(key)}`} /><button onClick={() => updateResource(key, (inventory[key] || 0) + 1)} aria-label={`Прибавить: ${getItemName(key)}`}><Plus size={12} /></button></div>
+              </div>
+            ))}
+          </div>
+          <div className="inventory-panel__hint"><CirclePlus size={15} /><span>Количество можно вписать вручную. Всё сохраняется автоматически.</span></div>
         </Reveal>
+
+        <div className="recipe-matcher" id="recipe-results">
+          <Reveal className="matcher-heading" delay={0.08}>
+            <div><span className="eyebrow">02 / ПОДБОР ГИДА</span><h2>Куда потратить: {getItemName(selected)}</h2><p>{selectedReadyCount > 0 ? <><Sparkles size={13} /> Уже доступно: <strong>{selectedReadyCount}</strong></> : <>В базе для этого ресурса: <strong>{selectedRecipes.length}</strong> рецептов</>}</p></div>
+            <button className={`ready-toggle ${onlyReady ? 'is-active' : ''}`} onClick={() => setOnlyReady(!onlyReady)}><span className="ready-toggle__check">{onlyReady && <Check size={12} />}</span>Только доступные</button>
+          </Reveal>
+          <Reveal className="matcher-filters" delay={0.1}>
+            <label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти среди рецептов ресурса…" />{query && <button onClick={() => setQuery('')} aria-label="Очистить"><X size={13} /></button>}</label>
+            <div className="segmented-tabs"><button className={resourceGroup === 'all' ? 'is-active' : ''} onClick={() => setResourceGroup('all')}>Все <span>{selectedRecipes.length}</span></button><button className={resourceGroup === 'almost' ? 'is-active' : ''} onClick={() => setResourceGroup('almost')}>Что-то есть</button></div>
+          </Reveal>
+          {spoilerFree && <div className="compact-spoiler-note"><EyeOff size={13} />Без спойлеров{hiddenSelected > 0 ? ` · скрыто ${hiddenSelected} поздних рецептов` : ''}</div>}
+          <div className="recipe-results-list">
+            {pageRecipes.map((recipe, index) => {
+              const status = getRecipeStatus(recipe, inventory);
+              const favorite = favorites.includes(recipe.id);
+              return (
+                <Reveal key={recipe.id} delay={Math.min(index * 0.04, 0.2)}>
+                  <article className={`recipe-result-card ${status.ready ? 'is-ready' : ''}`} style={{ '--item-accent': recipe.color }}>
+                    <button className="recipe-result-card__open" onClick={() => setModal({ type: 'recipe', item: recipe })} aria-label={`Открыть рецепт: ${recipe.name}`}>
+                      <TerrariaIcon itemKey={recipe.result} size="lg" />
+                      <div className="recipe-result-card__body"><div className="recipe-result-card__title"><strong>{recipe.name}{recipe.output > 1 ? ` ×${recipe.output}` : ''}</strong><small>{getCategoryName(recipe)}</small></div><span className="recipe-result-card__station">{recipe.station}</span><div className="ingredient-row">{recipe.ingredients.slice(0, 5).map((ingredient) => {
+                        const have = getIngredientCount(inventory, ingredient);
+                        const enough = have >= ingredient.amount;
+                        return <span key={`${ingredient.group || ingredient.key}-${ingredient.amount}`} className={`ingredient-pill ${enough ? 'is-enough' : 'is-missing'}`} title={ingredient.name}><GameSprite itemKey={ingredient.iconKey} size={16} /><span>{ingredient.group ? 'Группа' : getItemName(ingredient.key)}</span><b>{have}/{ingredient.amount}</b></span>;
+                      })}{recipe.ingredients.length > 5 && <span className="ingredient-pill">+{recipe.ingredients.length - 5}</span>}</div></div>
+                    </button>
+                    <span className={`recipe-result-card__state ${status.ready ? 'is-ready' : ''}`}>{status.ready ? <><Check size={12} />МОЖНО СОЗДАТЬ</> : <>НЕ ХВАТАЕТ: {status.missing}</>}</span>
+                    <button className={`recipe-result-card__favorite ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-label="Избранное"><Heart size={14} fill={favorite ? 'currentColor' : 'none'} /></button>
+                    <button className="recipe-result-card__chevron" onClick={() => setModal({ type: 'recipe', item: recipe })} aria-label="Подробнее"><ChevronRight size={17} /></button>
+                  </article>
+                </Reveal>
+              );
+            })}
+          </div>
+          {visibleRecipes.length === 0 && <EmptyState icon="workbench" title={onlyReady ? 'Пока не хватает ресурсов' : 'Рецептов не найдено'} text={onlyReady ? 'Добавь недостающие ингредиенты или покажи все рецепты — Гид подскажет, чего не хватает.' : 'Попробуй другой запрос или выбери другой ресурс.'} action={<button className="button button--soft" onClick={() => { setOnlyReady(false); setResourceGroup('all'); setQuery(''); }}>Показать все рецепты</button>} />}
+          {pageCount > 1 && <div className="resource-pagination"><button className="button button--ghost" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>Назад</button><span>Страница {safePage} / {pageCount}</span><button className="button button--ghost" disabled={safePage === pageCount} onClick={() => setPage(safePage + 1)}>Дальше <ArrowUpRight size={14} /></button></div>}
+        </div>
       </div>
     </div>
   );
+}
+
+function getCategoryName(recipe) {
+  return getRecipesForItem(recipe.result).length > 1 ? `Вариантов: ${recipesByResult[recipe.result].length}` : getStationLabel(recipe.stations[0]);
 }

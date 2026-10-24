@@ -30,7 +30,7 @@ export default function Intro({ onDone }) {
       <div className="intro__flash" aria-hidden="true" />
       <div className="intro__moon-glow" aria-hidden="true" />
       <div className="intro__boss" aria-hidden="true">
-        <img src="images/moon-lord.webp" alt="" />
+        <img src="images/bosses/moon-lord.gif" alt="Лунный лорд" />
       </div>
       <div className="intro__topline">
         <span>TERRARIA COMPANION</span>
