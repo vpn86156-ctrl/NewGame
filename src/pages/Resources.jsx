@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowUpRight, Backpack, Check, ChevronRight, CirclePlus, EyeOff, Heart,
   Minus, PackagePlus, Plus, RotateCcw, Search, ShieldCheck, Sparkles, X,
@@ -9,7 +10,7 @@ import {
   getItemColor, getItemName, getRecipeStatus, getRecipesForItem, getStationLabel, isRecipeVisible,
   matchesSearch, recipesByResult,
 } from '../gameData';
-import { EmptyState, PageHeader, Reveal } from '../components/UI';
+import { AnimatedNumber, EmptyState, PageHeader, Reveal } from '../components/UI';
 import TerrariaIcon, { GameSprite } from '../components/TerrariaIcon';
 
 const RECIPES_PER_PAGE = 12;
@@ -75,12 +76,12 @@ export default function Resources() {
   return (
     <div className="resources-page page-stack">
       <PageHeader eyebrow="ТВОЙ РЮКЗАК · ПОЛНАЯ БАЗА" title="Из того, что уже есть." description={`Добавь любой из ${allItemKeys.length.toLocaleString('ru-RU')} предметов Terraria, укажи количество — и Гид проверит все ${allGameRecipes.length.toLocaleString('ru-RU')} рецептов.`}>
-        <button className="button button--primary" onClick={scrollToRecipes}><Sparkles size={16} />Показать готовые крафты<span className="button-badge">{readyCount}</span></button>
+        <button className="button button--primary" onClick={scrollToRecipes}><Sparkles size={16} />Показать готовые крафты<AnimatedNumber className="button-badge" value={readyCount} /></button>
       </PageHeader>
 
       <div className="inventory-overview">
         <Reveal className="inventory-overview__lead"><span className="inventory-overview__icon"><Backpack size={23} /></span><div><span>РЮКЗАК ОТКРЫТ</span><strong>{inventoryKeys.length} видов · {totalUnits.toLocaleString('ru-RU')} предметов</strong></div></Reveal>
-        <Reveal className="inventory-overview__stat" delay={0.04}><span>Можно создать сейчас</span><strong>{readyCount}<small> рецептов</small></strong></Reveal>
+        <Reveal className="inventory-overview__stat" delay={0.04}><span>Можно создать сейчас</span><strong><AnimatedNumber value={readyCount} /><small> рецептов</small></strong></Reveal>
         <Reveal className="inventory-overview__stat" delay={0.08}><span>Выбрано для подбора</span><strong className="inventory-selected-name"><GameSprite itemKey={selected} size={22} />{getItemName(selected)}</strong></Reveal>
         <Reveal className="inventory-save" delay={0.12}><ShieldCheck size={17} /><span>Сохранено<br />в этом браузере</span></Reveal>
       </div>
@@ -91,15 +92,15 @@ export default function Resources() {
           <p className="panel-description">Выбери ресурс. Справа появятся все рецепты, где он нужен.</p>
           <div className="resource-add-wrap">
             <button className={`button button--soft button--full resource-add-button ${pickerOpen ? 'is-active' : ''}`} onClick={() => setPickerOpen(!pickerOpen)}>{pickerOpen ? <X size={16} /> : <PackagePlus size={16} />}{pickerOpen ? 'Закрыть поиск предметов' : 'Добавить любой предмет'}</button>
-            {pickerOpen && (
-              <div className="resource-picker">
+            <AnimatePresence initial={false}>{pickerOpen && (
+              <motion.div className="resource-picker" initial={{ opacity: 0, y: -8, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.99 }} transition={{ duration: 0.2 }}>
                 <label><Search size={15} /><input autoFocus value={resourceSearch} onChange={(event) => setResourceSearch(event.target.value)} placeholder="Зенит, кость или Bone…" /></label>
                 <div className="resource-picker__results">
                   {resourceResults.map((key) => <button key={key} onClick={() => addResource(key)}><GameSprite itemKey={key} size={24} /><span><strong>{getItemName(key)}</strong><small>{getItem(key)?.name}</small></span>{inventory[key] > 0 && <b>{inventory[key]}</b>}<Plus size={14} /></button>)}
                   {resourceResults.length === 0 && <p>Такого предмета нет. Попробуй русское или английское название.</p>}
                 </div>
-              </div>
-            )}
+              </motion.div>
+            )}</AnimatePresence>
           </div>
           <div className="resource-list">
             {inventoryKeys.map((key) => (

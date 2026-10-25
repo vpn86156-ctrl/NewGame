@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useGame } from '../context';
 import { guideStories, stages } from '../data';
-import { CheckLine, ItemIcon, PageHeader, PixelGuide, ProgressRing, Reveal } from '../components/UI';
+import { AnimatedNumber, CheckLine, ItemIcon, PageHeader, PixelGuide, ProgressRing, Reveal } from '../components/UI';
 import StageIcon from '../components/StageIcon';
 
 export default function Path() {
@@ -58,7 +58,7 @@ export default function Path() {
       )}
 
       <Reveal className="path-stats" delay={0.08}>
-        <div><span className="path-stats__icon"><Flag size={18} /></span><p>Пройдено глав<strong>{progress.length}</strong></p></div>
+        <div><span className="path-stats__icon"><Flag size={18} /></span><p>Пройдено глав<strong><AnimatedNumber value={progress.length} /></strong></p></div>
         <i />
         <div><span className="path-stats__icon"><Map size={18} /></span><p>{allComplete ? 'Статус мира' : 'Текущая глава'}<strong>{allComplete ? 'Свободное приключение' : currentStage.title}</strong></p></div>
         <i />
@@ -66,7 +66,7 @@ export default function Path() {
       </Reveal>
 
       <div className="path-layout">
-        <div className="stage-timeline">
+        <div className="stage-timeline" style={{ '--path-ratio': allComplete ? 1 : currentStageIndex / (stages.length - 1) }}>
           {stages.map((stage, index) => {
             const complete = progress.includes(stage.id);
             const current = index === currentStageIndex && !allComplete;

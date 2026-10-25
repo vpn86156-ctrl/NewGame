@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 const themes = [
   { id: 'forest', top: '#10251f', bottom: '#07110e', glow: '#70e4c1', accent: '#d5f96f' },
@@ -23,8 +23,11 @@ export default function Atmosphere({ stageIndex = 0 }) {
   const theme = themes[safeIndex];
 
   useEffect(() => {
-    document.documentElement.dataset.biome = theme.id;
-  }, [theme.id]);
+    const root = document.documentElement;
+    root.dataset.biome = theme.id;
+    root.style.setProperty('--world-accent', theme.accent);
+    root.style.setProperty('--world-glow', theme.glow);
+  }, [theme]);
 
   useEffect(() => {
     if (reduceMotion) return undefined;
@@ -52,28 +55,33 @@ export default function Atmosphere({ stageIndex = 0 }) {
   }, [reduceMotion]);
 
   return (
-    <div
-      ref={ref}
-      className="atmosphere"
-      aria-hidden="true"
-      style={{ '--sky-top': theme.top, '--sky-bottom': theme.bottom, '--biome-glow': theme.glow, '--biome-accent': theme.accent }}
-    >
-      <div className="atmosphere__sky" />
-      <div className="atmosphere__stars">{Array.from({ length: 22 }, (_, index) => <i
-        className="atmosphere__star" key={index}
-        style={{ left: `${(index * 43 + 7) % 97}%`, top: `${(index * 29 + 5) % 69}%`, '--star-delay': `${-(index % 7) * 0.8}s` }}
-      />)}</div>
-      <div className="atmosphere__moon" />
-      <div className="atmosphere__hill atmosphere__hill--far" />
-      <div className="atmosphere__hill atmosphere__hill--near" />
-      {Array.from({ length: 9 }, (_, index) => <span
-        className="atmosphere__tree" key={index}
-        style={{ '--tree-index': index, height: `${85 + (index * 31) % 65}px` }}
-      ><i /></span>)}
-      <div>{Array.from({ length: 15 }, (_, index) => <i
-        className="atmosphere__particle" key={index}
-        style={{ '--particle-x': `${4 + index * 6.4}%`, '--particle-delay': `${-index * 1.35}s`, '--particle-duration': `${12 + (index % 4) * 2}s` }}
-      />)}</div>
+    <div ref={ref} className="atmosphere" aria-hidden="true">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={theme.id}
+          className="atmosphere__theme"
+          style={{ '--sky-top': theme.top, '--sky-bottom': theme.bottom, '--biome-glow': theme.glow, '--biome-accent': theme.accent }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0.01 : 1.05, ease: 'easeOut' }}
+        >
+          <div className="atmosphere__sky" />
+          <div className="atmosphere__stars">{Array.from({ length: 22 }, (_, index) => <i
+            className="atmosphere__star" key={index}
+            style={{ left: `${(index * 43 + 7) % 97}%`, top: `${(index * 29 + 5) % 69}%`, '--star-delay': `${-(index % 7) * 0.8}s` }}
+          />)}</div>
+          <div className="atmosphere__moon" />
+          <div className="atmosphere__hill atmosphere__hill--far" />
+          <div className="atmosphere__hill atmosphere__hill--near" />
+          {Array.from({ length: 9 }, (_, index) => <span
+            className="atmosphere__tree" key={index}
+            style={{ '--tree-index': index, height: `${85 + (index * 31) % 65}px` }}
+          ><i /></span>)}
+          <div>{Array.from({ length: 15 }, (_, index) => <i
+            className="atmosphere__particle" key={index}
+            style={{ '--particle-x': `${4 + index * 6.4}%`, '--particle-delay': `${-index * 1.35}s`, '--particle-duration': `${12 + (index % 4) * 2}s` }}
+          />)}</div>
+        </motion.div>
+      </AnimatePresence>
       <div className="atmosphere__vignette" />
     </div>
   );

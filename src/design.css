@@ -40,7 +40,6 @@ input::placeholder, textarea::placeholder { color: #7b8d81; }
 .guide-card__story blockquote { color: #adbbb0; font-size: 13px; }
 .guide-card__portrait > span { font-size: 9px; }
 .item-modal__description { color: #a9b9ad; font-size: 12px; line-height: 1.65; }
-.recipe-view-toggle { font-size: 11px; }
 .offline-modal__heading p { color: #93a698; font-size: 11px; line-height: 1.5; }
 .offline-status { font-size: 9px; }
 .offline-download-card strong { font-size: 13px; }
@@ -384,4 +383,110 @@ input::placeholder, textarea::placeholder { color: #7b8d81; }
   .atmosphere__particle { display: none; }
   .world-hero:hover .world-hero__image, .recipe-tree-node:hover, .npc-neighbor:hover { transform: none; }
   .chapter-stamp__pixels { display: none; }
+}
+
+/* ---------- Second polish: connected motion and biome accents ---------- */
+:root { --world-accent: #d5f96f; --world-glow: #70e4c1; }
+.atmosphere { background: #07100e; }
+.atmosphere__theme { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom)); }
+.atmosphere__vignette { z-index: 2; }
+.status-dot { background: var(--world-accent); box-shadow: 0 0 12px var(--world-accent); transition: background .8s, box-shadow .8s; }
+.nav-item.is-active > svg { color: var(--world-accent); transition: color .8s; }
+.nav-item.is-active > i { background: var(--world-accent); box-shadow: 0 0 14px color-mix(in srgb, var(--world-accent) 45%, transparent); transition: background .8s, box-shadow .8s; }
+.nav-item.is-active > small { color: var(--world-accent); }
+.progress-ring__value { stroke: var(--world-accent); transition: stroke .8s; }
+.world-hero__light { background: radial-gradient(circle at 80% 23%, color-mix(in srgb, var(--world-accent) 14%, transparent), transparent 28%); transition: background 1s; }
+.world-hero__encounter {
+  border-color: color-mix(in srgb, var(--world-accent) 28%, transparent);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .22s, border-color .6s, background .22s, box-shadow .22s;
+}
+.world-hero__encounter-icon { animation: encounterFloat 4.8s ease-in-out infinite; }
+.world-hero__encounter-icon::after { background: color-mix(in srgb, var(--world-accent) 8%, transparent); transition: background .8s; }
+.world-hero__encounter:focus-visible { border-color: var(--world-accent); }
+@keyframes encounterFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.boss-objective { position: relative; overflow: hidden; }
+.boss-objective::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 25%, color-mix(in srgb, var(--stage-color) 10%, transparent) 50%, transparent 75%);
+  animation: bossSheen 7s ease-in-out infinite;
+}
+.boss-objective > * { position: relative; z-index: 1; }
+.boss-objective__icon { display: flex; flex: 0 0 auto; }
+.boss-objective__icon::after { content: ''; position: absolute; inset: -5px; border: 1px solid color-mix(in srgb, var(--stage-color) 28%, transparent); border-radius: 17px; animation: bossRing 3.4s ease-out infinite; }
+.boss-objective__icon .item-icon { animation: encounterFloat 4.8s .4s ease-in-out infinite; }
+.boss-objective small { color: #93a699; font-size: 9px; }
+.boss-objective > div > span { color: #9caea1; font-size: 10px; }
+@keyframes bossSheen { 0%, 62% { opacity: 0; transform: translateX(-110%); } 72% { opacity: .75; } 100% { opacity: 0; transform: translateX(110%); } }
+@keyframes bossRing { 0% { opacity: 0; transform: scale(.9); } 25% { opacity: .65; } 100% { opacity: 0; transform: scale(1.18); } }
+
+.stage-timeline::after {
+  content: '';
+  position: absolute;
+  top: 30px;
+  bottom: 48px;
+  left: 17px;
+  width: 1px;
+  background: linear-gradient(var(--world-accent), color-mix(in srgb, var(--world-glow) 55%, #35473a));
+  box-shadow: 0 0 9px color-mix(in srgb, var(--world-accent) 24%, transparent);
+  transform: scaleY(var(--path-ratio, 0));
+  transform-origin: top center;
+  transition: transform .85s cubic-bezier(.22, 1, .36, 1), background .8s;
+}
+.stage-timeline__node { transition: color .25s, background .25s, border-color .25s, box-shadow .25s; }
+.stage-timeline__node.is-current > span { animation: timelinePulse 2.2s ease-in-out infinite; }
+.stage-timeline__node.is-complete svg path { stroke-dasharray: 24; stroke-dashoffset: 0; animation: checkDraw .55s ease-out; }
+.timeline-card { transition: transform .22s, border-color .22s, background .22s, box-shadow .22s; }
+.timeline-card.is-selected { box-shadow: inset 3px 0 var(--stage-color), 0 10px 28px rgba(0, 0, 0, .1); }
+@keyframes timelinePulse { 0%, 100% { opacity: .55; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.25); } }
+@keyframes checkDraw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+
+.recipe-view-switch { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid #354a3c; border-radius: 11px; background: #0e1712; }
+.recipe-view-switch button { position: relative; min-width: 86px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 11px; border-radius: 8px; color: #8fa394; font-size: 11px; font-weight: 700; transition: color .2s, transform .2s; }
+.recipe-view-switch button > svg, .recipe-view-switch button > span:not(.recipe-view-switch__active) { position: relative; z-index: 1; }
+.recipe-view-switch button.is-active { color: var(--lime); }
+.recipe-view-switch button:active { transform: scale(.97); }
+.recipe-view-switch__active { position: absolute; inset: 0; border: 1px solid #526c3b; border-radius: 8px; background: linear-gradient(135deg, rgba(213, 249, 111, .12), rgba(213, 249, 111, .055)); box-shadow: 0 4px 14px rgba(0, 0, 0, .16); }
+.recipe-view-content { min-width: 0; }
+
+.animated-number { position: relative; display: inline-flex; min-width: 1ch; align-items: baseline; justify-content: center; line-height: inherit; vertical-align: baseline; }
+.animated-number > span { display: inline-block; color: inherit; font: inherit; white-space: nowrap; }
+.button-badge { margin-left: 3px; padding: 2px 6px; border-radius: 6px; background: rgba(19, 29, 12, .1); font-size: 11px; }
+.resource-picker { transform-origin: top center; border-color: #4a6251; }
+.resource-item.is-selected { border-color: color-mix(in srgb, var(--resource-color) 35%, #2b3931); box-shadow: inset 2px 0 color-mix(in srgb, var(--resource-color) 65%, transparent); }
+.resource-item__counter button { transition: color .16s, background .16s, transform .16s; }
+.resource-item__counter button:active { color: var(--world-accent); transform: scale(.84); }
+.button:active { transform: translateY(0) scale(.98); }
+.favorite-button { transition: color .2s, background .2s, transform .18s; }
+.favorite-button:active { transform: scale(.87); }
+.favorite-button.is-favorite svg { animation: favoritePop .34s cubic-bezier(.22, 1, .36, 1); }
+.ready-toggle__check svg { animation: favoritePop .28s ease-out; }
+.npc-grid { position: relative; }
+.npc-card { transform-origin: center top; }
+@keyframes favoritePop { 0% { transform: scale(.65); } 65% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+@media (hover: hover) {
+  .world-hero__encounter:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--world-accent) 58%, transparent); background: rgba(11, 22, 17, .82); box-shadow: 0 16px 38px rgba(0, 0, 0, .28); }
+  .world-hero__encounter:hover .world-hero__encounter-icon { animation-play-state: paused; }
+  .timeline-card:hover { box-shadow: 0 12px 30px rgba(0, 0, 0, .13); }
+}
+@media (max-width: 1080px) {
+  .stage-timeline::after { display: none; }
+}
+@media (max-width: 720px) {
+  .recipe-view-switch { width: 100%; }
+  .recipe-view-switch button { min-width: 0; flex: 1; }
+  .boss-objective::before { display: none; }
+  .boss-objective small { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-hero__encounter-icon, .boss-objective__icon .item-icon, .boss-objective::before, .boss-objective__icon::after, .stage-timeline__node.is-current > span { animation: none !important; }
+  .stage-timeline::after { transition: none; }
+  .world-hero__encounter:hover { transform: none; }
 }

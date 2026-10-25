@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import {
   ArrowRight, Backpack, BookOpen, Check, CheckCircle2, ChevronRight, Clock3,
-  Dices, Feather, GitBranch, Heart, Lightbulb, MapPin, Plus, Sparkles, Trash2, Trophy,
+  Dices, Feather, GitBranch, Heart, Lightbulb, List, MapPin, Plus, Sparkles, Trash2, Trophy,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGame } from '../context';
 import { worldTasks } from '../data';
 import { getCategoryLabel, getIngredientCount, getItem, getItemName, getRecipesForItem, obtainItemKeys } from '../gameData';
@@ -33,8 +34,22 @@ function RecipeModal({ item, initialView = 'list' }) {
       <p className="item-modal__description">{activeRecipe.description}</p>
       {variants.length > 1 && <div className="modal-section recipe-variants"><span className="eyebrow">СПОСОБЫ СОЗДАНИЯ · {variants.length}</span><div>{variants.map((recipe, index) => <button key={recipe.id} className={activeRecipe.id === recipe.id ? 'is-active' : ''} onClick={() => setActiveRecipe(recipe)}><TerrariaIcon itemKey={recipe.result} size="sm" /><span><strong>Вариант {index + 1}</strong><small>{recipe.station}</small></span>{activeRecipe.id === recipe.id && <Check size={15} />}</button>)}</div></div>}
       <div className="modal-section recipe-view-section">
-        <div className="recipe-view-heading"><span className="eyebrow">{recipeView === 'tree' ? 'ДЕРЕВО · РАСКРЫВАЙ ВЕТВИ И СМОТРИ, ГДЕ СОБРАТЬ НАХОДКИ' : 'ПОНАДОБИТСЯ · НАЖМИ НА ИНГРЕДИЕНТ, ЧТОБЫ УЗНАТЬ, ГДЕ ЕГО ВЗЯТЬ'}</span><button className="recipe-view-toggle" onClick={() => setRecipeView(recipeView === 'tree' ? 'list' : 'tree')}><GitBranch size={15} />{recipeView === 'tree' ? 'Показать списком' : 'Отобразить деревом'}</button></div>
-        {recipeView === 'tree' ? <RecipeTree key={activeRecipe.id} recipe={activeRecipe} /> : <div className="modal-ingredients">
+        <div className="recipe-view-heading">
+          <span className="eyebrow">{recipeView === 'tree' ? 'ДЕРЕВО · РАСКРЫВАЙ ВЕТВИ И СМОТРИ, ГДЕ СОБРАТЬ НАХОДКИ' : 'ПОНАДОБИТСЯ · НАЖМИ НА ИНГРЕДИЕНТ, ЧТОБЫ УЗНАТЬ, ГДЕ ЕГО ВЗЯТЬ'}</span>
+          <div className="recipe-view-switch" role="group" aria-label="Вид рецепта">
+            <button data-view="list" className={recipeView === 'list' ? 'is-active' : ''} onClick={() => setRecipeView('list')} aria-pressed={recipeView === 'list'}>
+              {recipeView === 'list' && <motion.span className="recipe-view-switch__active" layoutId="recipe-view-active" transition={{ type: 'spring', stiffness: 480, damping: 36 }} />}
+              <List size={14} /><span>Список</span>
+            </button>
+            <button data-view="tree" className={recipeView === 'tree' ? 'is-active' : ''} onClick={() => setRecipeView('tree')} aria-pressed={recipeView === 'tree'}>
+              {recipeView === 'tree' && <motion.span className="recipe-view-switch__active" layoutId="recipe-view-active" transition={{ type: 'spring', stiffness: 480, damping: 36 }} />}
+              <GitBranch size={14} /><span>Дерево</span>
+            </button>
+          </div>
+        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div className="recipe-view-content" key={`${activeRecipe.id}-${recipeView}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
+            {recipeView === 'tree' ? <RecipeTree key={activeRecipe.id} recipe={activeRecipe} /> : <div className="modal-ingredients">
         {activeRecipe.ingredients.map((ingredient) => {
           const have = getIngredientCount(inventory, ingredient);
           const enough = have >= ingredient.amount;
@@ -47,7 +62,10 @@ function RecipeModal({ item, initialView = 'list' }) {
             {ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length}) · нажми на предмет для подробностей</summary><div>{ingredient.options.map((key) => <button key={key} onClick={() => setModal({ type: 'item', itemKey: key, returnRecipe: activeRecipe })} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b><ChevronRight size={12} /></button>)}</div></details>}
           </div>;
         })}
-      </div>}</div>
+            </div>}
+          </motion.div>
+        </AnimatePresence>
+      </div>
       {recipeView === 'list' && <div className="station-note"><TerrariaIcon itemKey={getStationIcon(activeRecipe.stations[0])} size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{activeRecipe.station}</strong></div></div>}
       {activeRecipe.platforms?.some((platform) => !['desktop', 'console', 'mobile'].includes(platform)) && <div className="recipe-platform-note">Рецепт с платформенными ограничениями: {activeRecipe.platforms.join(', ')}</div>}
       <div className="modal-actions"><button className="button button--soft" onClick={() => { setModal(null); navigate('resources'); }}><Backpack size={17} /> Проверить ресурсы</button><button className="button button--primary" onClick={() => setModal(null)}>Понятно <Check size={17} /></button></div>

@@ -83,10 +83,10 @@ export default function Home() {
               <strong>{percent}%</strong><small>МИРА</small>
             </ProgressRing>
           </div>
-          {!allComplete && <div className="world-hero__encounter">
+          {!allComplete && <button type="button" className="world-hero__encounter" onClick={() => navigate('path')} aria-label={`Открыть текущую главу: ${currentStage.boss}`}>
             <span className="world-hero__encounter-icon"><StageIcon stageId={currentStage.id} color={currentStage.color} size="lg" /></span>
             <span><small>{currentStage.id === 'awakening' ? 'ПЕРВАЯ ЦЕЛЬ' : 'ЦЕЛЬ ГЛАВЫ'}</small><strong>{currentStage.boss}</strong></span>
-          </div>}
+          </button>}
         </Reveal>
 
         <Reveal className="guide-card" delay={0.14}>

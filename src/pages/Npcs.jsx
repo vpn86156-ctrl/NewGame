@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Coins, Heart, HeartCrack, Home, Search, Sparkles, Users, X } from 'lucide-react';
 import { getNpcName, matchesSearch, npcById, otherTownNpcs, townNpcs } from '../gameData';
 import { EmptyState, PageHeader, Reveal } from '../components/UI';
@@ -39,7 +40,8 @@ function BiomePreference({ type, id, santa }) {
   return <div className={`npc-biome ${liked ? 'is-liked' : 'is-disliked'}`}><GameSprite itemKey={biome.icon} size={25} /><span><small>{liked ? (santa ? 'ЛЮБИМЫЙ БИОМ' : 'НРАВИТСЯ') : (santa ? 'НЕНАВИДИТ' : 'НЕ НРАВИТСЯ')}</small><strong>{biome.name}</strong></span><b>{effect}</b></div>;
 }
 
-function NpcCard({ npc }) {
+const NpcCard = forwardRef(function NpcCard({ npc }, ref) {
+  const reduceMotion = useReducedMotion();
   const isPrincess = npc.special === 'princess';
   const isSanta = npc.special === 'santa';
   const hasLoved = npc.neighbors.loved.length > 0;
@@ -48,7 +50,13 @@ function NpcCard({ npc }) {
   const biomeFactor = isSanta ? 0.88 : npc.biome.liked !== 'n/a' ? 0.94 : 1;
   const estimate = Math.max(0.75, Math.min(1.5, neighborFactor * biomeFactor * 0.95));
   return (
-    <Reveal as="article" className="npc-card" id={`npc-${npc.id}`}>
+    <motion.article
+      ref={ref} className="npc-card" id={`npc-${npc.id}`} layout={!reduceMotion}
+      initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.985 }}
+      transition={{ duration: 0.3, layout: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } }}
+    >
       <header className="npc-card__header">
         <div className="npc-card__portrait"><NamedSprite icon={npc.icon} label={getNpcName(npc.id)} size={74} /></div>
         <div><span className="eyebrow">ГОРОДСКОЙ NPC</span><h2>{getNpcName(npc.id)}</h2><span className="npc-card__english">{npc.name}</span><p>{npc.role}</p></div>
@@ -63,9 +71,9 @@ function NpcCard({ npc }) {
       {npc.id === 'taxcollector' && <div className="npc-card__note"><Coins size={14} /> Счастье увеличивает скорость и максимум собираемых налогов.</div>}
       {npc.id === 'angler' && <div className="npc-card__note"><Sparkles size={14} /> Счастье улучшает награды за рыболовные задания.</div>}
       {!isPrincess && <footer className="npc-card__footer"><span><Coins size={14} /> Пример с хорошим соседом, биомом и уединением</span><strong>≈ {Math.round(estimate * 100)}% цены</strong></footer>}
-    </Reveal>
+    </motion.article>
   );
-}
+});
 
 export default function Npcs() {
   const [query, setQuery] = useState('');
@@ -93,7 +101,17 @@ export default function Npcs() {
         <div className="filter-chips"><button className={biome === 'all' ? 'is-active' : ''} onClick={() => setBiome('all')}>Все биомы</button>{Object.entries(biomeInfo).filter(([id]) => id !== 'n/a').map(([id, info]) => <button key={id} className={biome === id ? 'is-active' : ''} onClick={() => setBiome(id)}>{info.name}</button>)}</div>
       </Reveal>
 
-      {visible.length > 0 ? <div className="npc-grid">{visible.map((npc) => <NpcCard key={npc.id} npc={npc} />)}</div> : <EmptyState icon="home" title="Такой житель не найден" text="Попробуй другое имя или выбери все биомы." action={<button className="button button--soft" onClick={() => { setQuery(''); setBiome('all'); }}>Сбросить поиск</button>} />}
+      <AnimatePresence mode="wait" initial={false}>
+        {visible.length > 0 ? (
+          <motion.div className="npc-grid" key="npc-results" initial={false} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <AnimatePresence mode="popLayout">{visible.map((npc) => <NpcCard key={npc.id} npc={npc} />)}</AnimatePresence>
+          </motion.div>
+        ) : (
+          <motion.div key="npc-empty" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.22 }}>
+            <EmptyState icon="home" title="Такой житель не найден" text="Попробуй другое имя или выбери все биомы." action={<button className="button button--soft" onClick={() => { setQuery(''); setBiome('all'); }}>Сбросить поиск</button>} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Reveal className="other-npcs">
         <div className="section-heading"><div><span className="eyebrow">ТОЖЕ ВСТРЕТЯТСЯ В МИРЕ</span><h2>Гости и городские питомцы</h2><p>У них нет обычной таблицы предпочтений, но они тоже являются частью жизни города.</p></div><HeartCrack size={23} /></div>

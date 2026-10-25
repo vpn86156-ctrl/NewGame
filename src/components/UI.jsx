@@ -120,6 +120,23 @@ export function ProgressRing({ value, size = 82, stroke = 7, children }) {
   );
 }
 
+export function AnimatedNumber({ value, className = '' }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <span className={`animated-number ${className}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={String(value)}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.94 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96 }}
+          transition={{ duration: reduceMotion ? 0.01 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+        >{value}</motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
+
 export function Modal({ children, onClose, className = '', label = 'Диалог' }) {
   const reduceMotion = useReducedMotion();
   const closeRef = useRef(null);
