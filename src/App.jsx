@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import {
   AlertTriangle, Backpack, BookOpen, Check, CheckCircle2, ChevronDown, ChevronRight,
   Compass, Download, Eye, EyeOff, Hammer, Home, Info, Map, Menu, Play, RotateCcw, Search,
@@ -18,6 +18,8 @@ import { Crafts, Obtain } from './pages/Library';
 import Stories from './pages/Stories';
 import Journal from './pages/Journal';
 import Npcs from './pages/Npcs';
+import Atmosphere from './components/Atmosphere';
+import ChapterStamp from './components/ChapterStamp';
 
 const navGroups = [
   {
@@ -156,7 +158,7 @@ function CurrentPage() {
 }
 
 export default function App() {
-  const { view, modal, searchOpen } = useGame();
+  const { view, modal, searchOpen, currentStageIndex } = useGame();
   const [showIntro, setShowIntro] = useState(() => {
     try { return window.sessionStorage.getItem('terra-intro-seen') !== 'true'; } catch { return true; }
   });
@@ -181,8 +183,8 @@ export default function App() {
   }, [showIntro]);
 
   return (
-    <>
-      <div className="app-background" aria-hidden="true"><span /><span /><span /></div>
+    <MotionConfig reducedMotion="user">
+      <Atmosphere stageIndex={currentStageIndex} />
       <div className="app-shell">
         <Sidebar />
         <div className="app-main">
@@ -201,8 +203,9 @@ export default function App() {
       <AnimatePresence>{modal && <ModalRoot />}</AnimatePresence>
       <AnimatePresence>{searchOpen && <SearchPalette />}</AnimatePresence>
       <Toasts />
+      <ChapterStamp />
       <AnimatePresence>{showIntro && <Intro onDone={closeIntro} />}</AnimatePresence>
-    </>
+    </MotionConfig>
   );
 }
 

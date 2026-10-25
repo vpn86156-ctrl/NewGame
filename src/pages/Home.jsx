@@ -65,6 +65,7 @@ export default function Home() {
         <Reveal className="world-hero" delay={0.06}>
           <img className="world-hero__image" src="images/terraria-night-hero.webp" alt="Ночной лес и дом путешественника" />
           <div className="world-hero__shade" />
+          <div className="world-hero__light" aria-hidden="true" />
           <div className="world-hero__top">
             <span className="glass-label"><Map size={14} /> ЗЕЛЁНАЯ ДОЛИНА</span>
             <span className="glass-label glass-label--small">ДЕНЬ {8 + completedCount * 2}</span>
@@ -82,6 +83,10 @@ export default function Home() {
               <strong>{percent}%</strong><small>МИРА</small>
             </ProgressRing>
           </div>
+          {!allComplete && <div className="world-hero__encounter">
+            <span className="world-hero__encounter-icon"><StageIcon stageId={currentStage.id} color={currentStage.color} size="lg" /></span>
+            <span><small>{currentStage.id === 'awakening' ? 'ПЕРВАЯ ЦЕЛЬ' : 'ЦЕЛЬ ГЛАВЫ'}</small><strong>{currentStage.boss}</strong></span>
+          </div>}
         </Reveal>
 
         <Reveal className="guide-card" delay={0.14}>

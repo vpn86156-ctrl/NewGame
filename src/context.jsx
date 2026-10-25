@@ -69,6 +69,7 @@ export function GameProvider({ children }) {
     }
     setProgress((items) => [...items, stageId]);
     setModal(null);
+    window.dispatchEvent(new CustomEvent('terra:stage-complete', { detail: { stageId } }));
     const next = stages[index + 1];
     showToast(next ? `Глава пройдена. Открыт этап «${next.title}»!` : 'Лунный лорд повержен. Летопись завершена!');
   }, [progress, setProgress, showToast]);

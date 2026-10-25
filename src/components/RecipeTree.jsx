@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, ChevronDown, ChevronRight, GitBranch, Hammer, MapPin, PackageOpen } from 'lucide-react';
+import { Check, ChevronRight, GitBranch, Hammer, MapPin, PackageOpen } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useGame } from '../context';
 import {
   gameCatalog, getIngredientCount, getItemName, getRecipesForItem, getSourceName, obtainLabels,
@@ -38,7 +39,7 @@ function getLeafSource(key) {
   return method ? obtainLabels[method] || method : 'Открыть способы получения';
 }
 
-function TreeBranch({ ingredient, requiredAmount, ancestry, depth, inventory, onOpenItem, path }) {
+function TreeBranch({ ingredient, requiredAmount, ancestry, depth, inventory, onOpenItem, path, reduceMotion }) {
   const chooseOption = () => ingredient.key || [...ingredient.options].sort((a, b) =>
     (inventory[b] || 0) - (inventory[a] || 0) || Number(Boolean(getRecipesForItem(b).length)) - Number(Boolean(getRecipesForItem(a).length)))[0];
   const [selectedKey, setSelectedKey] = useState(chooseOption);
@@ -72,12 +73,18 @@ function TreeBranch({ ingredient, requiredAmount, ancestry, depth, inventory, on
           <small>{recipe ? cyclic ? 'Эта ветвь уже показана выше' : `${recipe.station}${crafts > 1 ? ` · ${crafts} крафта` : ''}` : getLeafSource(selectedKey)}</small>
         </button>
         <span className="recipe-tree-node__amount"><b>×{requiredAmount}</b><small className={enough ? 'has-enough' : 'not-enough'}>{enough ? <Check size={11} /> : null} Есть {have}</small></span>
-        <span className="recipe-tree-node__chevron">{expandable ? expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} /> : <MapPin size={15} />}</span>
+        <span className="recipe-tree-node__chevron">{expandable ? <motion.span animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }}><ChevronRight size={16} /></motion.span> : <MapPin size={15} />}</span>
       </div>
 
       {ingredient.group && <label className="recipe-tree-group"><span>Вариант для этой ветви</span><select value={selectedKey} onChange={(event) => changeOption(event.target.value)}>{ingredient.options.map((key) => <option key={key} value={key}>{getItemName(key)} · в рюкзаке {inventory[key] || 0}</option>)}</select></label>}
 
-      {expanded && recipe && <div className="recipe-tree-branch__children">
+      <AnimatePresence initial={false}>{expanded && recipe && <motion.div
+        className="recipe-tree-branch__children"
+        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -5 }}
+        animate={{ opacity: 1, height: 'auto', y: 0 }}
+        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -5 }}
+        transition={{ duration: reduceMotion ? 0.01 : 0.26, ease: [0.22, 1, 0.36, 1] }}
+      >
         <div className="recipe-tree-recipe-line">
           <span><Hammer size={13} /> {recipe.station}{crafts > 1 ? ` · повторить ${crafts} раза` : ''}</span>
           <button onClick={() => onOpenItem(selectedKey)}><MapPin size={12} /> Все способы получения</button>
@@ -93,15 +100,17 @@ function TreeBranch({ ingredient, requiredAmount, ancestry, depth, inventory, on
             depth={depth + 1}
             inventory={inventory}
             onOpenItem={onOpenItem}
+            reduceMotion={reduceMotion}
           />)}
         </ul>
-      </div>}
+      </motion.div>}</AnimatePresence>
     </li>
   );
 }
 
 export default function RecipeTree({ recipe }) {
   const { inventory, setModal } = useGame();
+  const reduceMotion = useReducedMotion();
   const openItem = (itemKey) => setModal({ type: 'item', itemKey, returnRecipe: recipe, returnView: 'tree' });
   return (
     <div className="recipe-tree">
@@ -124,6 +133,7 @@ export default function RecipeTree({ recipe }) {
           depth={0}
           inventory={inventory}
           onOpenItem={openItem}
+          reduceMotion={reduceMotion}
         />)}
       </ul>
       <div className="recipe-tree__legend"><span><Hammer size={12} /> Создать</span><span><MapPin size={12} /> Найти или купить</span><span><PackageOpen size={12} /> Нажатие на находку открывает источники</span></div>

@@ -62,10 +62,10 @@ export function Reveal({ children, className = '', delay = 0, as = 'div', ...pro
   return (
     <Component
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 34, scale: 0.985, filter: 'blur(5px)' }}
-      whileInView={reduceMotion ? {} : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+      initial={reduceMotion ? false : { opacity: 0, y: 22, scale: 0.99 }}
+      whileInView={reduceMotion ? {} : { opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.12, margin: '0px 0px -30px' }}
-      transition={{ duration: 0.62, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.48, delay, ease: [0.22, 1, 0.36, 1] }}
       {...props}
     >
       {children}
@@ -100,17 +100,19 @@ export function PageHeader({ eyebrow, title, description, children }) {
 }
 
 export function ProgressRing({ value, size = 82, stroke = 7, children }) {
+  const reduceMotion = useReducedMotion();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
+  const targetOffset = circumference - (Math.min(100, Math.max(0, value)) / 100) * circumference;
   return (
     <div className="progress-ring" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle className="progress-ring__track" cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} />
         <motion.circle
           className="progress-ring__value" cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke}
-          strokeDasharray={circumference} initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: circumference - (Math.min(100, Math.max(0, value)) / 100) * circumference }}
-          transition={{ duration: 1, ease: 'easeOut' }} transform={`rotate(-90 ${size / 2} ${size / 2})`} strokeLinecap="round"
+          strokeDasharray={circumference} initial={{ strokeDashoffset: reduceMotion ? targetOffset : circumference }}
+          animate={{ strokeDashoffset: targetOffset }}
+          transition={{ duration: reduceMotion ? 0 : 0.8, ease: 'easeOut' }} transform={`rotate(-90 ${size / 2} ${size / 2})`} strokeLinecap="round"
         />
       </svg>
       <div className="progress-ring__content">{children}</div>
@@ -119,6 +121,7 @@ export function ProgressRing({ value, size = 82, stroke = 7, children }) {
 }
 
 export function Modal({ children, onClose, className = '', label = 'Диалог' }) {
+  const reduceMotion = useReducedMotion();
   const closeRef = useRef(null);
   const dialogRef = useRef(null);
   const onCloseRef = useRef(onClose);
@@ -138,13 +141,15 @@ export function Modal({ children, onClose, className = '', label = 'Диалог
   }, []);
 
   return (
-    <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => {
+    <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0.01 : 0.2 }} onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
       <motion.section
         ref={dialogRef} className={`modal ${className}`} role="dialog" aria-modal="true" aria-label={label}
-        initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.965 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 22, scale: 0.975 }}
+        transition={reduceMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 32, mass: 0.85 }}
       >
         <button ref={closeRef} className="icon-button modal__close" onClick={onClose} aria-label="Закрыть">
           <X size={19} />
@@ -156,13 +161,14 @@ export function Modal({ children, onClose, className = '', label = 'Диалог
 }
 
 export function EmptyState({ icon = 'compass', title, text, action }) {
+  const reduceMotion = useReducedMotion();
   return (
-    <div className="empty-state">
+    <motion.div className="empty-state" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.28 }}>
       <ItemIcon icon={icon} size="lg" />
       <h3>{title}</h3>
       <p>{text}</p>
       {action}
-    </div>
+    </motion.div>
   );
 }
 
