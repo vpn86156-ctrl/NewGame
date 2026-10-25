@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Coins, Heart, HeartCrack, Home, Search, Sparkles, Users, X } from 'lucide-react';
 import { getNpcName, matchesSearch, npcById, otherTownNpcs, townNpcs } from '../gameData';
@@ -78,6 +78,13 @@ const NpcCard = forwardRef(function NpcCard({ npc }, ref) {
 export default function Npcs() {
   const [query, setQuery] = useState('');
   const [biome, setBiome] = useState('all');
+  const reduceMotion = useReducedMotion();
+  const revealEmptyState = useCallback((node) => {
+    if (!node) return;
+    requestAnimationFrame(() => {
+      if (node.isConnected) node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    });
+  }, [reduceMotion]);
   const visible = useMemo(() => townNpcs.filter((npc) => {
     if (biome !== 'all' && npc.biome.liked !== biome) return false;
     const relations = Object.values(npc.neighbors).flat().map(getNpcName).join(' ');
@@ -107,7 +114,7 @@ export default function Npcs() {
             <AnimatePresence mode="popLayout">{visible.map((npc) => <NpcCard key={npc.id} npc={npc} />)}</AnimatePresence>
           </motion.div>
         ) : (
-          <motion.div key="npc-empty" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.22 }}>
+          <motion.div ref={revealEmptyState} className="npc-empty" key="npc-empty" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.22 }}>
             <EmptyState icon="home" title="Такой житель не найден" text="Попробуй другое имя или выбери все биомы." action={<button className="button button--soft" onClick={() => { setQuery(''); setBiome('all'); }}>Сбросить поиск</button>} />
           </motion.div>
         )}

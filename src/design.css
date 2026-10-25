@@ -490,3 +490,349 @@ input::placeholder, textarea::placeholder { color: #7b8d81; }
   .stage-timeline::after { transition: none; }
   .world-hero__encounter:hover { transform: none; }
 }
+
+/* ---------- Third polish: readability, distinct biomes and connected navigation ---------- */
+:root { --muted: #a2b2a8; --faint: #829589; }
+input::placeholder, textarea::placeholder { color: #899b8f; }
+.nav-group__label { font-size: 10px; }
+.world-switcher__main small, .sidebar__profile small, .topbar__profile small { font-size: 10px; }
+.sidebar__guide span, .sidebar__guide p { font-size: 11px; }
+.quick-link-card__meta, .guide-card__chapter { font-size: 11px; }
+.item-modal__description { font-size: 13px; }
+.search-palette__results small, .search-palette__footer { font-size: 11px; }
+.library-search input, .npc-toolbar input { font-size: 13px; }
+.catalog-controls label, .catalog-controls__meta { font-size: 11px; }
+.catalog-controls select { font-size: 12px; }
+.craft-card__ingredients em, .craft-card__ingredients b, .craft-card__english, .craft-card__footer, .obtain-card__footer { font-size: 11px; }
+.obtain-card > p { font-size: 13px; }
+.obtain-card__source small { font-size: 10px; }
+.obtain-card__source strong { font-size: 12px; }
+.obtain-card__source > div > span { color: #9eafa2; font-size: 11px; }
+.stage-preview-card > p { font-size: 13px; }
+.stage-preview-card__bottom > span { font-size: 11px; }
+.stage-status { font-size: 10px; }
+.catalog-attribution { color: #8fa294; font-size: 11px; line-height: 1.65; }
+.modal-ingredients strong { font-size: 12px; }
+.modal-ingredients small { font-size: 10px; }
+.ingredient-open-hint { font-size: 9px; }
+.recipe-variants strong { font-size: 12px; }
+.recipe-variants small { font-size: 10px; }
+.station-note small { font-size: 10px; }
+.station-note strong { font-size: 12px; }
+.acquisition-source__kind { font-size: 10px; }
+.acquisition-source__note, .visual-acquisition-guide p { color: #a2b3a7; font-size: 12px; line-height: 1.6; }
+.acquisition-tags span { font-size: 10px; }
+.offline-modal__heading p, .offline-download-card small, .offline-steps p, .offline-section__title p,
+.offline-install > small, .offline-privacy p { font-size: 12px; }
+.offline-status, .offline-ready, .offline-steps li > span, .offline-error { font-size: 11px; }
+.offline-import-preview > span, .offline-import-preview > p { font-size: 12px; }
+
+.recipe-tree__intro p { font-size: 12px; }
+.recipe-tree-root small { font-size: 10px; }
+.recipe-tree-root div > span, .recipe-tree-root > b { font-size: 11px; }
+.recipe-tree-node__main strong { font-size: 12px; }
+.recipe-tree-node__main small { font-size: 10px; }
+.recipe-tree-node__main em { font-size: 9px; }
+.recipe-tree-node__amount > b { font-size: 13px; }
+.recipe-tree-node__amount small { font-size: 10px; }
+.recipe-tree-group { font-size: 10px; }
+.recipe-tree-group select { font-size: 11px; }
+.recipe-tree-recipe-line > span, .recipe-tree-recipe-line > button, .recipe-tree__legend { font-size: 10px; }
+
+.npc-card__header p { font-size: 12px; }
+.npc-card__english { font-size: 11px; }
+.npc-biome small { font-size: 9px; }
+.npc-biome strong { font-size: 11px; }
+.npc-relation__label { font-size: 11px; }
+.npc-relation__label b { font-size: 12px; }
+.npc-neighbor { font-size: 10px; }
+.npc-special strong { font-size: 13px; }
+.npc-special p, .npc-card__note { font-size: 11px; }
+.npc-card__footer > span { font-size: 10px; }
+.npc-card__footer > strong { font-size: 13px; }
+.happiness-rule small { font-size: 10px; }
+.happiness-rule p { font-size: 11px; }
+.happiness-specials span { font-size: 11px; }
+.other-npcs__grid strong { font-size: 12px; }
+.other-npcs__grid small, .other-npcs__grid p { font-size: 10px; }
+
+/* The search and primary filters remain available without covering the catalog. */
+.library-toolbar, .npc-toolbar {
+  position: sticky;
+  z-index: 35;
+  top: 88px;
+  align-self: stretch;
+  margin: -12px -12px 0;
+  padding: 12px;
+  border: 1px solid rgba(109, 137, 117, .28);
+  border-radius: 14px;
+  background: rgba(9, 16, 14, .91);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .22), inset 0 1px rgba(255, 255, 255, .025);
+  backdrop-filter: blur(18px);
+}
+.library-toolbar .filter-chips, .npc-toolbar .filter-chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px 2px 5px;
+  scrollbar-width: thin;
+  scrollbar-color: #3b5043 transparent;
+  overscroll-behavior-x: contain;
+}
+.library-toolbar .filter-chips button, .npc-toolbar .filter-chips button { min-height: 34px; flex: 0 0 auto; }
+.library-search, .npc-toolbar > label { background: rgba(17, 27, 22, .94); }
+#craft-grid, #obtain-grid { scroll-margin-top: 225px; }
+.item-modal__hero [data-shared-icon] { z-index: 2; }
+
+/* Each chapter keeps the same inexpensive layers, but gets its own skyline and weather. */
+.atmosphere__mist {
+  position: absolute;
+  right: -8%;
+  bottom: -4%;
+  left: -8%;
+  height: 38%;
+  opacity: .32;
+  background:
+    radial-gradient(ellipse at 15% 90%, color-mix(in srgb, var(--biome-glow) 12%, transparent), transparent 56%),
+    radial-gradient(ellipse at 80% 100%, color-mix(in srgb, var(--biome-accent) 8%, transparent), transparent 58%);
+  transform: translate3d(calc(var(--look-x) * 5px), 0, 0);
+}
+.atmosphere__theme[data-scenery="slime"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="slime"] .atmosphere__tree::after {
+  border-radius: 48% 52% 42% 58%;
+  box-shadow: 6px -10px 0 var(--biome-glow), -3px 10px 0 var(--biome-glow);
+}
+.atmosphere__theme[data-scenery="slime"] .atmosphere__tree i { border-radius: 4px 4px 0 0; }
+.atmosphere__theme[data-scenery="night"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="night"] .atmosphere__tree::after {
+  left: -1px;
+  width: 33px;
+  height: 47px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  box-shadow: none;
+}
+.atmosphere__theme[data-scenery="night"] .atmosphere__tree::after { top: -10px; left: 6px; width: 23px; height: 37px; }
+.atmosphere__theme[data-scenery="night"] .atmosphere__tree i { height: 48%; }
+.atmosphere__theme[data-scenery="night"] .atmosphere__moon { opacity: .3; }
+
+.atmosphere__theme[data-scenery="corruption"] .atmosphere__tree i {
+  clip-path: polygon(35% 0, 72% 0, 60% 42%, 100% 68%, 67% 64%, 58% 100%, 17% 100%, 35% 55%, 0 30%, 39% 39%);
+  transform: rotate(var(--tree-lean));
+  transform-origin: bottom center;
+}
+.atmosphere__theme[data-scenery="corruption"] .atmosphere__tree::before {
+  top: 8px;
+  left: -4px;
+  width: 39px;
+  height: 43px;
+  clip-path: polygon(48% 0, 62% 32%, 100% 17%, 74% 51%, 93% 83%, 58% 69%, 43% 100%, 33% 64%, 0 77%, 23% 43%, 7% 17%, 39% 31%);
+  box-shadow: none;
+}
+.atmosphere__theme[data-scenery="corruption"] .atmosphere__tree::after { top: 29px; left: 12px; width: 20px; height: 28px; box-shadow: none; clip-path: polygon(50% 0, 100% 45%, 68% 100%, 24% 82%, 0 31%); }
+.atmosphere__theme[data-scenery="corruption"] .atmosphere__hill--far { clip-path: polygon(0 48%, 11% 26%, 19% 49%, 30% 14%, 37% 43%, 50% 25%, 62% 49%, 73% 19%, 84% 45%, 92% 28%, 100% 46%, 100% 100%, 0 100%); }
+
+.atmosphere__theme[data-scenery="dungeon"] .atmosphere__tree { width: 56px; opacity: .17; }
+.atmosphere__theme[data-scenery="dungeon"] .atmosphere__tree i {
+  left: 5px;
+  width: 46px;
+  height: 100%;
+  clip-path: polygon(0 10%, 12% 10%, 12% 0, 27% 0, 27% 10%, 42% 10%, 42% 0, 58% 0, 58% 10%, 73% 10%, 73% 0, 88% 0, 88% 10%, 100% 10%, 100% 100%, 0 100%);
+}
+.atmosphere__theme[data-scenery="dungeon"] .atmosphere__tree::before {
+  top: 38%;
+  left: 17px;
+  width: 6px;
+  height: 15px;
+  background: var(--sky-bottom);
+  box-shadow: 18px 0 var(--sky-bottom), 0 27px var(--sky-bottom), 18px 27px var(--sky-bottom);
+}
+.atmosphere__theme[data-scenery="dungeon"] .atmosphere__tree::after { display: none; }
+
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__stars,
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__moon,
+.atmosphere__theme[data-scenery="temple"] .atmosphere__stars,
+.atmosphere__theme[data-scenery="temple"] .atmosphere__moon { display: none; }
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__sky {
+  background:
+    radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--biome-accent) 18%, transparent), transparent 48%),
+    radial-gradient(ellipse at 78% 22%, color-mix(in srgb, var(--biome-glow) 10%, transparent), transparent 42%);
+}
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__tree { width: 49px; opacity: .22; }
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__tree i {
+  left: 0;
+  width: 49px;
+  height: 100%;
+  clip-path: polygon(50% 0, 67% 36%, 100% 100%, 0 100%, 26% 43%);
+  background: color-mix(in srgb, var(--biome-glow) 34%, #140b09);
+}
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__tree::after { display: none; }
+.atmosphere__theme[data-scenery="underworld"] .atmosphere__hill--near { clip-path: polygon(0 44%, 9% 14%, 17% 48%, 28% 21%, 39% 51%, 51% 8%, 62% 45%, 75% 19%, 85% 49%, 94% 24%, 100% 42%, 100% 100%, 0 100%); }
+
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__moon::after { display: none; }
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__moon { opacity: .26; }
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__tree i,
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__tree i,
+.atmosphere__theme[data-scenery="moon"] .atmosphere__tree i {
+  left: 4px;
+  width: 25px;
+  height: 100%;
+  clip-path: polygon(50% 0, 100% 34%, 74% 100%, 24% 100%, 0 34%);
+  background: color-mix(in srgb, var(--biome-glow) 65%, #17201d);
+}
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__tree::after,
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__tree::after,
+.atmosphere__theme[data-scenery="moon"] .atmosphere__tree::before,
+.atmosphere__theme[data-scenery="moon"] .atmosphere__tree::after {
+  clip-path: polygon(50% 0, 100% 38%, 72% 100%, 20% 100%, 0 38%);
+  box-shadow: none;
+}
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__tree::before { left: -8px; transform: rotate(-18deg); }
+.atmosphere__theme[data-scenery="hallow"] .atmosphere__tree::after { left: 21px; transform: rotate(19deg); }
+
+.atmosphere__theme[data-scenery="jungle"] .atmosphere__tree i { left: 11px; width: 9px; }
+.atmosphere__theme[data-scenery="jungle"] .atmosphere__tree::before {
+  top: 10px;
+  left: -10px;
+  width: 48px;
+  height: 34px;
+  border-radius: 55% 25% 58% 30%;
+  box-shadow: 8px -14px 0 var(--biome-glow), -3px 13px 0 var(--biome-glow);
+}
+.atmosphere__theme[data-scenery="jungle"] .atmosphere__tree::after { left: 18px; width: 16px; height: 45px; border-radius: 50%; box-shadow: -16px -7px 0 color-mix(in srgb, var(--biome-glow) 75%, transparent); }
+.atmosphere__theme[data-scenery="jungle"] .atmosphere__mist { opacity: .48; }
+
+.atmosphere__theme[data-scenery="temple"] .atmosphere__tree { width: 55px; opacity: .18; }
+.atmosphere__theme[data-scenery="temple"] .atmosphere__tree i {
+  left: 4px;
+  width: 47px;
+  height: 100%;
+  clip-path: polygon(10% 0, 90% 0, 90% 8%, 100% 8%, 100% 18%, 90% 18%, 90% 100%, 10% 100%, 10% 18%, 0 18%, 0 8%, 10% 8%);
+  background: color-mix(in srgb, var(--biome-glow) 42%, #171108);
+}
+.atmosphere__theme[data-scenery="temple"] .atmosphere__tree::before {
+  top: 34%;
+  left: 10px;
+  width: 35px;
+  height: 3px;
+  background: var(--sky-bottom);
+  box-shadow: 0 17px var(--sky-bottom), 0 34px var(--sky-bottom);
+}
+.atmosphere__theme[data-scenery="temple"] .atmosphere__tree::after { display: none; }
+.atmosphere__theme[data-scenery="temple"] .atmosphere__sky { background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--biome-glow) 13%, transparent), transparent 55%); }
+
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__stars,
+.atmosphere__theme[data-scenery="moon"] .atmosphere__stars { opacity: .82; }
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__moon {
+  border: 2px solid color-mix(in srgb, var(--biome-glow) 65%, transparent);
+  background: transparent;
+  box-shadow: 0 0 55px color-mix(in srgb, var(--biome-glow) 28%, transparent), inset 0 0 25px color-mix(in srgb, var(--biome-glow) 12%, transparent);
+}
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__moon::after { display: none; }
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__tree::before { left: -8px; transform: rotate(-22deg); }
+.atmosphere__theme[data-scenery="lunar"] .atmosphere__tree::after { left: 22px; transform: rotate(24deg); }
+.atmosphere__theme[data-scenery="moon"] .atmosphere__tree::before { left: -7px; transform: rotate(-14deg); }
+.atmosphere__theme[data-scenery="moon"] .atmosphere__tree::after { left: 20px; transform: rotate(16deg); }
+
+.atmosphere__theme[data-weather="bubbles"] .atmosphere__particle {
+  width: 7px;
+  height: 7px;
+  border: 1px solid color-mix(in srgb, var(--biome-glow) 48%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--biome-glow) 10%, transparent);
+  animation-name: atmosphereBubbles;
+}
+.atmosphere__theme[data-weather="spores"] .atmosphere__particle {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--biome-glow);
+  animation-name: atmosphereSpores;
+}
+.atmosphere__theme[data-weather="embers"] .atmosphere__particle {
+  width: 3px;
+  height: 6px;
+  border-radius: 60% 40% 55% 45%;
+  background: var(--biome-accent);
+  box-shadow: 0 0 11px color-mix(in srgb, var(--biome-accent) 65%, transparent);
+  animation-name: atmosphereEmbers;
+}
+.atmosphere__theme[data-weather="dust"] .atmosphere__particle {
+  width: 3px;
+  height: 2px;
+  background: color-mix(in srgb, var(--biome-glow) 65%, #d8c9a1);
+  box-shadow: none;
+  animation-name: atmosphereDust;
+}
+.atmosphere__theme[data-weather="sparkles"] .atmosphere__particle,
+.atmosphere__theme[data-weather="shards"] .atmosphere__particle {
+  width: 5px;
+  height: 5px;
+  clip-path: polygon(50% 0, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0 50%, 37% 37%);
+  animation-name: atmosphereSparkles;
+}
+.atmosphere__theme[data-weather="shards"] .atmosphere__particle { border-radius: 0; animation-name: atmosphereShards; }
+@keyframes atmosphereBubbles {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.7); }
+  16% { opacity: .25; }
+  75% { opacity: .12; }
+  100% { opacity: 0; transform: translate3d(45px, -55vh, 0) scale(1.15); }
+}
+@keyframes atmosphereSpores {
+  0% { opacity: 0; transform: translate3d(0, 0, 0); }
+  18% { opacity: .32; }
+  72% { opacity: .16; }
+  100% { opacity: 0; transform: translate3d(-46px, -48vh, 0); }
+}
+@keyframes atmosphereEmbers {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.8); }
+  12% { opacity: .5; }
+  68% { opacity: .22; }
+  100% { opacity: 0; transform: translate3d(22px, -72vh, 0) scale(.35); }
+}
+@keyframes atmosphereDust {
+  0% { opacity: 0; transform: translate3d(-15px, -20vh, 0); }
+  16% { opacity: .2; }
+  80% { opacity: .1; }
+  100% { opacity: 0; transform: translate3d(80px, 55vh, 0); }
+}
+@keyframes atmosphereSparkles {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0) scale(.5); }
+  22% { opacity: .38; }
+  65% { opacity: .16; }
+  100% { opacity: 0; transform: translate3d(28px, -60vh, 0) rotate(180deg) scale(1); }
+}
+@keyframes atmosphereShards {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0); }
+  16% { opacity: .32; }
+  76% { opacity: .13; }
+  100% { opacity: 0; transform: translate3d(-32px, -65vh, 0) rotate(270deg); }
+}
+
+@media (max-width: 720px) {
+  .library-toolbar, .npc-toolbar { top: 76px; margin: -10px -8px 0; padding: 10px; gap: 10px; border-radius: 12px; }
+  .library-search { min-height: 48px; }
+  .catalog-controls__selects, .catalog-controls label { min-width: 0; }
+  .catalog-controls select { width: 65%; min-width: 0; flex: 0 1 65%; }
+  #craft-grid, #obtain-grid { scroll-margin-top: 205px; }
+  .recipe-tree__intro p { font-size: 11px; }
+  .recipe-tree-node__main strong { font-size: 11px; }
+  .recipe-tree-node__main small, .recipe-tree-node__amount small { font-size: 9px; }
+  .boss-objective small { font-size: 9px; }
+  .atmosphere__mist { height: 31%; }
+}
+@media (max-width: 460px) {
+  .item-modal__description { font-size: 12px; }
+  .happiness-rule small { font-size: 9px; }
+  .happiness-rule p { font-size: 10px; }
+  .npc-card__footer > span { font-size: 9px; }
+  .catalog-attribution { font-size: 10px; }
+}
+@media (max-width: 900px) and (max-height: 620px) {
+  .library-toolbar, .npc-toolbar { position: relative; top: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere__mist { transform: none !important; }
+  [data-shared-icon] { transform: none !important; will-change: auto; }
+}

@@ -16,7 +16,7 @@ import TerrariaIcon, { GameSprite } from '../components/TerrariaIcon';
 const RECIPES_PER_PAGE = 12;
 
 export default function Resources() {
-  const { inventory, updateResource, setInventory, currentStageIndex, spoilerFree, setModal, favorites, toggleFavorite } = useGame();
+  const { inventory, updateResource, setInventory, currentStageIndex, spoilerFree, modal, setModal, favorites, toggleFavorite } = useGame();
   const [selected, setSelected] = useState('Wood');
   const [query, setQuery] = useState('');
   const [onlyReady, setOnlyReady] = useState(false);
@@ -131,7 +131,7 @@ export default function Resources() {
                 <Reveal key={recipe.id} delay={Math.min(index * 0.04, 0.2)}>
                   <article className={`recipe-result-card ${status.ready ? 'is-ready' : ''}`} style={{ '--item-accent': recipe.color }}>
                     <button className="recipe-result-card__open" onClick={() => setModal({ type: 'recipe', item: recipe })} aria-label={`Открыть рецепт: ${recipe.name}`}>
-                      <TerrariaIcon itemKey={recipe.result} size="lg" />
+                      <TerrariaIcon itemKey={recipe.result} size="lg" layoutId={modal ? undefined : `craft-icon-${recipe.id}`} />
                       <div className="recipe-result-card__body"><div className="recipe-result-card__title"><strong>{recipe.name}{recipe.output > 1 ? ` ×${recipe.output}` : ''}</strong><small>{getCategoryName(recipe)}</small></div><span className="recipe-result-card__station">{recipe.station}</span><div className="ingredient-row">{recipe.ingredients.slice(0, 5).map((ingredient) => {
                         const have = getIngredientCount(inventory, ingredient);
                         const enough = have >= ingredient.amount;

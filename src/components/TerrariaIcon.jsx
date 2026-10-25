@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { getItemColor, getItemName, getNamedSprite, getSourceName, getSprite } from '../gameData';
 
 const pixelSizes = { sm: 23, md: 32, lg: 42, xl: 55, hero: 88 };
@@ -37,12 +38,18 @@ export function SourceSprite({ source, size = 40, className = '' }) {
   return <NamedSprite icon={source?.icon} label={getSourceName(source)} size={size} className={className} />;
 }
 
-export default function TerrariaIcon({ itemKey, size = 'md', className = '', noSlot = false }) {
+export default function TerrariaIcon({ itemKey, size = 'md', className = '', noSlot = false, layoutId }) {
   const pixelSize = typeof size === 'number' ? size : pixelSizes[size] ?? 32;
   if (noSlot) return <GameSprite itemKey={itemKey} size={pixelSize} className={className} />;
+  const Component = layoutId ? motion.span : 'span';
+  const sharedMotion = layoutId ? {
+    layoutId,
+    layout: 'position',
+    transition: { type: 'spring', stiffness: 420, damping: 36, mass: 0.75 },
+  } : {};
   return (
-    <span className={`item-icon item-icon--${size} terraria-icon ${className}`} style={{ '--item-color': getItemColor(itemKey) }}>
+    <Component className={`item-icon item-icon--${size} terraria-icon ${className}`} style={{ '--item-color': getItemColor(itemKey) }} data-shared-icon={layoutId || undefined} {...sharedMotion}>
       <GameSprite itemKey={itemKey} size={pixelSize} />
-    </span>
+    </Component>
   );
 }

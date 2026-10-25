@@ -27,7 +27,7 @@ function RecipeModal({ item, initialView = 'list' }) {
   return (
     <Modal onClose={() => setModal(null)} label={`Рецепт: ${activeRecipe.name}`} className="item-modal">
       <div className="item-modal__hero" style={{ '--item-accent': activeRecipe.color }}>
-        <TerrariaIcon itemKey={activeRecipe.result} size="xl" />
+        <TerrariaIcon itemKey={activeRecipe.result} size="xl" layoutId={`craft-icon-${item.id}`} />
         <div><span className="eyebrow">{getCategoryLabel(activeRecipe.category)} · РЕЦЕПТ</span><h2>{activeRecipe.name}{activeRecipe.output > 1 && <small> ×{activeRecipe.output}</small>}</h2>{activeRecipe.name !== activeRecipe.englishName && <span className="item-modal__english">{activeRecipe.englishName}</span>}</div>
         <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(activeRecipe.id)} aria-label="Избранное"><Heart size={19} fill={favorite ? 'currentColor' : 'none'} /></button>
       </div>
@@ -57,7 +57,7 @@ function RecipeModal({ item, initialView = 'list' }) {
           const openItem = () => ingredient.key && setModal({ type: 'item', itemKey: ingredient.key, returnRecipe: activeRecipe });
           return <div key={`${ingredient.group || ingredient.key}-${ingredient.amount}`} className="modal-ingredient">
             <MainTag className={`modal-ingredient__main ${ingredient.key ? 'is-clickable' : ''}`} onClick={ingredient.key ? openItem : undefined} aria-label={ingredient.key ? `Как получить: ${ingredient.name}` : undefined}>
-              <TerrariaIcon itemKey={ingredient.iconKey} /><span><strong>{ingredient.name}</strong><small className={enough ? 'has-enough' : 'not-enough'}>{ingredient.group ? `Лучший вариант в рюкзаке: ${have}` : `В рюкзаке: ${have}`}</small>{ingredient.key && <em className="ingredient-open-hint">Где и как получить</em>}</span><b>×{ingredient.amount}</b>{ingredient.key && <ChevronRight size={16} />}
+              <TerrariaIcon itemKey={ingredient.iconKey} layoutId={ingredient.key ? `item-icon-${ingredient.key}` : undefined} /><span><strong>{ingredient.name}</strong><small className={enough ? 'has-enough' : 'not-enough'}>{ingredient.group ? `Лучший вариант в рюкзаке: ${have}` : `В рюкзаке: ${have}`}</small>{ingredient.key && <em className="ingredient-open-hint">Где и как получить</em>}</span><b>×{ingredient.amount}</b>{ingredient.key && <ChevronRight size={16} />}
             </MainTag>
             {ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length}) · нажми на предмет для подробностей</summary><div>{ingredient.options.map((key) => <button key={key} onClick={() => setModal({ type: 'item', itemKey: key, returnRecipe: activeRecipe })} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b><ChevronRight size={12} /></button>)}</div></details>}
           </div>;

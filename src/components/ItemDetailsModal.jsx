@@ -117,7 +117,7 @@ export default function ItemDetailsModal({ itemKey, returnRecipe = null, returnV
   return (
     <Modal onClose={() => setModal(null)} label={`Как получить: ${getItemName(itemKey)}`} className="item-modal item-details-modal">
       <div className="item-modal__hero" style={{ '--item-accent': getItemColor(itemKey) }}>
-        <TerrariaIcon itemKey={itemKey} size="xl" />
+        <TerrariaIcon itemKey={itemKey} size="xl" layoutId={`item-icon-${itemKey}`} />
         <div><span className="eyebrow">{getCategoryLabel(item.categories?.[0])} · КАК ПОЛУЧИТЬ</span><h2>{getItemName(itemKey)}</h2>{item.nameRu && <span className="item-modal__english">{item.name}</span>}</div>
         <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(favoriteId)} aria-label="Избранное"><Sparkles size={18} fill={favorite ? 'currentColor' : 'none'} /></button>
       </div>

@@ -49,7 +49,7 @@ function Pagination({ page, pageCount, onChange }) {
 }
 
 export function Crafts() {
-  const { currentStageIndex, spoilerFree, setModal, favorites, toggleFavorite } = useGame();
+  const { currentStageIndex, spoilerFree, modal, setModal, favorites, toggleFavorite } = useGame();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [station, setStation] = useState('all');
@@ -123,7 +123,7 @@ export function Crafts() {
                   <article className="craft-card" style={{ '--item-accent': recipe.color }}>
                     <button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button>
                     <button className="craft-card__main" onClick={() => setModal({ type: 'recipe', item: recipe })} aria-label={`Открыть рецепт: ${recipe.name}`}>
-                      <div className="craft-card__visual"><span className="craft-card__grid" /><TerrariaIcon itemKey={recipe.result} size="xl" /><span className="craft-card__category">{getCategoryLabel(recipe.category)}</span>{variants.length > 1 && <span className="craft-card__variant">Вариант {variantIndex + 1}/{variants.length}</span>}</div>
+                      <div className="craft-card__visual"><span className="craft-card__grid" /><TerrariaIcon itemKey={recipe.result} size="xl" layoutId={modal ? undefined : `craft-icon-${recipe.id}`} /><span className="craft-card__category">{getCategoryLabel(recipe.category)}</span>{variants.length > 1 && <span className="craft-card__variant">Вариант {variantIndex + 1}/{variants.length}</span>}</div>
                       <div className="craft-card__body">
                         <h3 title={recipe.englishName}>{recipe.name}{recipe.output > 1 && <small>×{recipe.output}</small>}</h3>
                         {recipe.name !== recipe.englishName && <span className="craft-card__english">{recipe.englishName}</span>}
@@ -148,7 +148,7 @@ export function Crafts() {
 }
 
 export function Obtain() {
-  const { currentStageIndex, spoilerFree, setModal, favorites, toggleFavorite } = useGame();
+  const { currentStageIndex, spoilerFree, modal, setModal, favorites, toggleFavorite } = useGame();
   const [query, setQuery] = useState('');
   const [method, setMethod] = useState('all');
   const [category, setCategory] = useState('all');
@@ -231,7 +231,7 @@ export function Obtain() {
             return (
               <Reveal key={key} delay={Math.min((index % 8) * 0.04, 0.24)}>
                 <article className="obtain-card obtain-card--catalog" style={{ '--item-accent': getItemColor(key) }}>
-                  <div className="obtain-card__top"><TerrariaIcon itemKey={key} size="lg" /><span className="obtain-card__category">{getCategoryLabel(item.categories?.[0])}</span><button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(`item-${key}`)} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} /></button></div>
+                  <div className="obtain-card__top"><TerrariaIcon itemKey={key} size="lg" layoutId={modal ? undefined : `item-icon-${key}`} /><span className="obtain-card__category">{getCategoryLabel(item.categories?.[0])}</span><button className={`favorite-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(`item-${key}`)} aria-label={favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} /></button></div>
                   <h3>{getItemName(key)}</h3>{item.nameRu && <span className="obtain-card__english">{item.name}</span>}
                   <div className="obtain-card__methods">{(item.obtain || []).slice(0, 3).map((id) => <span key={id}>{obtainLabels[id] || id}</span>)}{item.unobtainable && <span className="is-unobtainable">Недоступно</span>}</div>
                   <div className="obtain-card__source">

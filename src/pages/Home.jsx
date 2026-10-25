@@ -18,7 +18,7 @@ const quickLinks = [
 
 export default function Home() {
   const {
-    navigate, currentStage, currentStageIndex, progress, spoilerFree, inventory, allComplete,
+    navigate, currentStage, currentStageIndex, progress, spoilerFree, inventory, allComplete, modal,
     setModal, setActiveTask, journal, challengeAccepted, setChallengeAccepted, showToast,
   } = useGame();
   const availableStories = useMemo(() => guideStories.filter((story) => story.stage <= currentStageIndex), [currentStageIndex]);
@@ -189,7 +189,7 @@ export default function Home() {
             <strong>{craftable.length} <small>рецептов</small></strong>
           </div>
           <div className="resource-promo__recipes">
-            {craftable.slice(0, 4).map((recipe) => <button key={recipe.id} onClick={() => setModal({ type: 'recipe', item: recipe })} title={recipe.name}><TerrariaIcon itemKey={recipe.result} /></button>)}
+            {craftable.slice(0, 4).map((recipe) => <button key={recipe.id} onClick={() => setModal({ type: 'recipe', item: recipe })} title={recipe.name}><TerrariaIcon itemKey={recipe.result} layoutId={modal ? undefined : `craft-icon-${recipe.id}`} /></button>)}
             {craftable.length > 4 && <span>+{craftable.length - 4}</span>}
           </div>
           <button className="button button--soft button--full" onClick={() => navigate('resources')}>
