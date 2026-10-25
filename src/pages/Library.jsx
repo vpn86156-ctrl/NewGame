@@ -4,10 +4,11 @@ import {
   EyeOff, Heart, MapPin, Search, SlidersHorizontal,
 } from 'lucide-react';
 import { useGame } from '../context';
+import { stages } from '../data';
 import {
-  allGameRecipes, allItemKeys, gameCatalog, getCategoryLabel, getItem, getItemColor,
-  getItemName, getItemSearchText, getSourceName, getStationLabel, isItemVisible,
-  matchesSearch, obtainLabels, recipesByResult, isRecipeVisible,
+  allGameRecipes, allItemKeys, biomeLabels, gameCatalog, getCategoryLabel, getItem, getItemBiomes, getItemColor,
+  getItemName, getItemSearchText, getItemStage, getSourceName, getStationLabel, isItemVisible,
+  matchesSearch, matchesWeaponClass, obtainLabels, platformLabels, recipesByResult, isRecipeVisible, weaponClassLabels,
 } from '../gameData';
 import { EmptyState, PageHeader, Reveal } from '../components/UI';
 import TerrariaIcon, { GameSprite, NamedSprite, SourceSprite } from '../components/TerrariaIcon';
@@ -151,6 +152,11 @@ export function Obtain() {
   const [query, setQuery] = useState('');
   const [method, setMethod] = useState('all');
   const [category, setCategory] = useState('all');
+  const [stageFilter, setStageFilter] = useState('all');
+  const [biome, setBiome] = useState('all');
+  const [weaponClass, setWeaponClass] = useState('all');
+  const [version, setVersion] = useState('all');
+  const [platform, setPlatform] = useState('all');
   const [page, setPage] = useState(1);
   const availableItems = useMemo(() => allItemKeys.filter((key) => isItemVisible(key, currentStageIndex, spoilerFree)), [currentStageIndex, spoilerFree]);
   const categories = useMemo(() => [...new Set(allItemKeys.flatMap((key) => getItem(key)?.categories || []))]
@@ -158,18 +164,26 @@ export function Obtain() {
   const methods = useMemo(() => [...new Set(allItemKeys.flatMap((key) => getItem(key)?.obtain || []))]
     .filter((id) => obtainLabels[id])
     .sort((a, b) => obtainLabels[a].localeCompare(obtainLabels[b], 'ru')), []);
+  const biomes = useMemo(() => [...new Set(allItemKeys.flatMap(getItemBiomes))].filter((id) => biomeLabels[id]).sort((a, b) => biomeLabels[a].localeCompare(biomeLabels[b], 'ru')), []);
+  const versions = useMemo(() => [...new Set(allItemKeys.map((key) => getItem(key)?.version).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), []);
+  const platforms = useMemo(() => [...new Set(allItemKeys.flatMap((key) => getItem(key)?.platforms || []))].filter((id) => platformLabels[id]), []);
   const visible = useMemo(() => availableItems.filter((key) => {
     const item = getItem(key);
     if (method !== 'all' && !(item?.obtain || []).includes(method)) return false;
     if (category !== 'all' && !(item?.categories || []).includes(category)) return false;
+    if (stageFilter !== 'all' && getItemStage(key) !== Number(stageFilter)) return false;
+    if (biome !== 'all' && !getItemBiomes(key).includes(biome)) return false;
+    if (!matchesWeaponClass(key, weaponClass)) return false;
+    if (version !== 'all' && item?.version !== version) return false;
+    if (platform !== 'all' && !(item?.platforms || []).includes(platform)) return false;
     return matchesSearch(getItemSearchText(key), query);
-  }), [availableItems, category, method, query]);
+  }), [availableItems, biome, category, method, platform, query, stageFilter, version, weaponClass]);
 
-  useEffect(() => { setPage(1); }, [query, method, category, currentStageIndex, spoilerFree]);
+  useEffect(() => { setPage(1); }, [query, method, category, stageFilter, biome, weaponClass, version, platform, currentStageIndex, spoilerFree]);
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const pageItems = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const reset = () => { setQuery(''); setMethod('all'); setCategory('all'); };
+  const reset = () => { setQuery(''); setMethod('all'); setCategory('all'); setStageFilter('all'); setBiome('all'); setWeaponClass('all'); setVersion('all'); setPlatform('all'); };
   const changePage = (next) => {
     setPage(Math.max(1, Math.min(pageCount, next)));
     document.getElementById('obtain-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -191,6 +205,11 @@ export function Obtain() {
       <Reveal className="catalog-controls" delay={0.07}>
         <div className="catalog-controls__selects">
           <label><SlidersHorizontal size={15} /><span>Категория</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">Все категории</option>{categories.map((id) => <option key={id} value={id}>{getCategoryLabel(id)}</option>)}</select></label>
+          <label><span>Этап</span><select value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}><option value="all">Любой</option>{stages.map((stage, index) => <option key={stage.id} value={index}>{stage.roman} · {stage.title}</option>)}</select></label>
+          <label><span>Биом</span><select value={biome} onChange={(event) => setBiome(event.target.value)}><option value="all">Любой</option>{biomes.map((id) => <option key={id} value={id}>{biomeLabels[id]}</option>)}</select></label>
+          <label><span>Класс</span><select value={weaponClass} onChange={(event) => setWeaponClass(event.target.value)}><option value="all">Любой</option>{Object.entries(weaponClassLabels).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+          <label><span>Версия</span><select value={version} onChange={(event) => setVersion(event.target.value)}><option value="all">Любая</option>{versions.map((id) => <option key={id} value={id}>{id}</option>)}</select></label>
+          <label><span>Платформа</span><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option value="all">Любая</option>{platforms.map((id) => <option key={id} value={id}>{platformLabels[id]}</option>)}</select></label>
         </div>
         <div className="catalog-controls__meta"><span className="sprite-proof"><GameSprite itemKey="Aglet" size={21} /> Все предметы игры</span><span>{visible.length ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, visible.length)} из ${visible.length.toLocaleString('ru-RU')}` : '0 предметов'}</span></div>
       </Reveal>

@@ -70,6 +70,7 @@ def add_sprite(icon):
     named_sprites[icon] = index
     return index
 
+manual_item_ru = {'GPS': 'Навигатор'}
 compact_items = {}
 for item in items:
     key = item['key']
@@ -86,15 +87,17 @@ for item in items:
         'vendors': item.get('vendors', []),
         'milestone': item.get('milestone', 'start'),
     }
-    name_ru = ru_primary.get(key) or ru_fallback.get(key)
+    name_ru = ru_primary.get(key) or ru_fallback.get(key) or manual_item_ru.get(key)
     if name_ru and name_ru != item['name']:
         compact_item['nameRu'] = name_ru
     if ru_tooltips.get(key):
         compact_item['tooltipRu'] = ru_tooltips[key]
     if key == 'EnchantedSword' and 'plunder' not in compact_item['obtain']:
         compact_item['obtain'].insert(0, 'plunder')
+    compact_item['platforms'] = item.get('platforms', [])
     for field in ('id', 'tooltip', 'damage', 'damageType', 'defense', 'pickaxePower',
-                  'axePower', 'hammerPower', 'stack', 'url', 'unobtainable', 'otherForm'):
+                  'axePower', 'hammerPower', 'stack', 'url', 'unobtainable', 'otherForm',
+                  'version', 'introduced'):
         if field in item and item[field] not in (False, None, ''):
             compact_item[field] = item[field]
     compact_items[key] = compact_item
@@ -277,6 +280,24 @@ acquisition_guides = {
         'imageAlt': 'Настоящее святилище Зачарованного меча в Terraria',
         'rate': '96,67%', 'biome': 'Подземелье и святилища мечей',
         'url': 'https://terraria.wiki.gg/wiki/Enchanted_Sword_Shrine',
+    }],
+    'FallenStar': [{
+        'title': 'Звёзды падают ночью',
+        'text': 'Ночью исследуй поверхность и собирай светящиеся звёзды до рассвета. Они появляются на блоках и платформах, а утром исчезают.',
+        'rate': 'Ночью', 'biome': 'Поверхность мира',
+        'url': 'https://terraria.wiki.gg/wiki/Fallen_Star',
+    }],
+    'NaturesGift': [{
+        'title': 'Синий цветок в джунглях',
+        'text': 'Ищи небольшой синий цветок на траве в подземных джунглях. Срежь его инструментом или оружием, чтобы получить Дар природы.',
+        'rate': 'Объект в мире', 'biome': 'Подземные джунгли',
+        'url': 'https://terraria.wiki.gg/wiki/Nature%27s_Gift',
+    }],
+    'WaterBolt': [{
+        'title': 'Книга на полках Данжа',
+        'text': 'Осматривай книжные полки в Данже: нужная книга стоит отдельно и имеет синее оформление. Разбей её, но не заходи глубоко до победы над Скелетроном.',
+        'rate': 'Находка', 'biome': 'Данж',
+        'url': 'https://terraria.wiki.gg/wiki/Water_Bolt',
     }],
 }
 

@@ -3,8 +3,8 @@ import { ArrowRight, BookOpen, FileText, Map, Search, Sparkles } from 'lucide-re
 import { useGame } from '../context';
 import { guideStories, stages } from '../data';
 import {
-  allItemKeys, getCategoryLabel, getItem, getItemColor, getItemName, getItemSearchText,
-  getRecipesForItem, isItemVisible, matchesSearch, normalizeSearch, obtainLabels, townNpcs, otherTownNpcs, getNpcName,
+  allItemKeys, getCategoryLabel, getItem, getItemColor, getItemName, getItemSearchText, getSearchScore,
+  getRecipesForItem, isItemVisible, normalizeSearch, obtainLabels, townNpcs, otherTownNpcs, getNpcName,
 } from '../gameData';
 import { EmptyState, ItemIcon, Modal } from './UI';
 import TerrariaIcon, { NamedSprite } from './TerrariaIcon';
@@ -54,21 +54,19 @@ export default function SearchPalette() {
   }, [currentStageIndex, journal, navigate, setModal, spoilerFree]);
 
   const normalized = normalizeSearch(query);
-  const results = entries.filter((entry) => normalized ? matchesSearch(`${entry.title} ${entry.subtitle} ${entry.keywords || ''}`, query) : entry.popular)
-    .sort((a, b) => {
-      if (!normalized) return Number(b.popular) - Number(a.popular) || a.title.localeCompare(b.title, 'ru');
-      const aTitle = normalizeSearch(a.title);
-      const bTitle = normalizeSearch(b.title);
-      const score = (title) => title === normalized ? 0 : title.startsWith(normalized) ? 1 : title.includes(normalized) ? 2 : 3;
-      return score(aTitle) - score(bTitle) || a.title.localeCompare(b.title, 'ru');
-    }).slice(0, 10);
+  const results = entries.map((entry) => ({
+    entry,
+    score: normalized ? getSearchScore(`${entry.title} ${entry.subtitle} ${entry.keywords || ''}`, query, entry.title) : (entry.popular ? 0 : Infinity),
+  })).filter(({ score }) => score !== Infinity)
+    .sort((a, b) => a.score - b.score || Number(b.entry.popular) - Number(a.entry.popular) || a.entry.title.localeCompare(b.entry.title, 'ru'))
+    .slice(0, 10).map(({ entry }) => entry);
   const close = () => setSearchOpen(false);
   const choose = (entry) => { setSearchOpen(false); entry.action(); };
 
   return (
     <Modal onClose={close} label="Поиск по летописи" className="search-modal">
       <div className="search-palette__input"><Search size={22} /><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Зенит, любой предмет, босс или история…" /><kbd>ESC</kbd></div>
-      <div className="search-palette__caption"><span>{normalized ? `Результаты поиска · показано ${results.length}` : 'Быстрый путь к нужной странице'}</span><span><Sparkles size={13} /> {allItemKeys.length.toLocaleString('ru-RU')} предметов · русский и английский</span></div>
+      <div className="search-palette__caption"><span>{normalized ? `Результаты поиска · показано ${results.length}` : 'Быстрый путь к нужной странице'}</span><span><Sparkles size={13} /> {allItemKeys.length.toLocaleString('ru-RU')} предметов · опечатки, синонимы и транслитерация</span></div>
       <div className="search-palette__results">
         {results.map((entry) => (
           <button key={`${entry.kind}-${entry.id}`} onClick={() => choose(entry)}>
@@ -77,7 +75,7 @@ export default function SearchPalette() {
             <ArrowRight size={16} />
           </button>
         ))}
-        {results.length === 0 && <EmptyState icon="compass" title="Ничего не найдено" text="Попробуй более короткий запрос, русское или английское название предмета." />}
+        {results.length === 0 && <EmptyState icon="compass" title="Ничего не найдено" text="Попробуй короче, с одной опечаткой, латиницей или обычным русским названием — например «меч в камне»." />}
       </div>
       <div className="search-palette__footer"><span><Map size={13} /> Путь мира</span><span><BookOpen size={13} /> Истории</span><span><FileText size={13} /> Дневник</span><kbd>CTRL K</kbd></div>
     </Modal>

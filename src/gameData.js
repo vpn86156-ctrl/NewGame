@@ -94,15 +94,110 @@ export function getItemName(key) {
   return getItem(key)?.nameRu || itemNameRu[key] || getItem(key)?.name || key || 'Неизвестный предмет';
 }
 
+export const itemSearchAliases = {
+  Zenith: ['zenit', 'зенит', 'лучший меч', 'финальный меч'],
+  BeeKeeper: ['пчелиный меч', 'меч пчеловода', 'пчёлы меч'],
+  Meowmere: ['меч лунного лорда', 'мяу меч', 'кошачий меч', 'meow mere'],
+  StarWrath: ['меч лунного лорда', 'звездный гнев', 'звёздная ярость лунного лорда'],
+  TerraBlade: ['терра меч', 'terra blade', 'терра блейд'],
+  EnchantedSword: ['меч в камне', 'меч из святилища', 'энчантед сворд'],
+  HermesBoots: ['ботинки гермеса', 'сапоги скорости', 'быстрые сапоги'],
+  MagicMirror: ['зеркало домой', 'зеркало возвращения', 'телепорт домой'],
+  CellPhone: ['телефон', 'сотовый', 'селл фон'],
+  AnkhShield: ['анк щит', 'анkh shield', 'щит анкха'],
+  GPS: ['жпс', 'навигатор', 'координаты'],
+  Starfury: ['звездная ярость', 'старфьюри'],
+  WaterBolt: ['водный болт', 'водяной снаряд', 'книга данжа'],
+  RodOfHarmony: ['жезл гармонии', 'род оф хармони'],
+};
+
 export function normalizeSearch(value = '') {
   return String(value).toLowerCase().replace(/ё/g, 'е').replace(/[«»„“”"'_()\-–—]/g, ' ').replace(/[^a-zа-я0-9%+.\s]/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
-export function matchesSearch(searchText, query) {
+const cyrillicToLatin = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
+  к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u',
+  ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+export function transliterateSearch(value = '') {
+  return [...normalizeSearch(value)].map((letter) => cyrillicToLatin[letter] ?? letter).join('').replace(/\s+/g, ' ').trim();
+}
+
+function editDistance(a, b, maximum) {
+  if (Math.abs(a.length - b.length) > maximum) return maximum + 1;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let rowMinimum = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+      rowMinimum = Math.min(rowMinimum, current[j]);
+    }
+    if (rowMinimum > maximum) return maximum + 1;
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+const searchTokenCache = new Map();
+function getSearchTokens(text) {
+  if (searchTokenCache.has(text)) return searchTokenCache.get(text);
+  const normalized = normalizeSearch(text);
+  const tokens = [...new Set(`${normalized} ${transliterateSearch(normalized)}`.split(' ').filter(Boolean))];
+  if (searchTokenCache.size > 10000) searchTokenCache.clear();
+  searchTokenCache.set(text, tokens);
+  return tokens;
+}
+
+/** Lower scores are better. Infinity means that the query does not match. */
+export function getSearchScore(searchText, query, title = '') {
   const normalized = normalizeSearch(query);
-  if (!normalized) return true;
-  const haystack = normalizeSearch(searchText);
-  return normalized.split(' ').every((token) => haystack.includes(token));
+  if (!normalized) return 0;
+  const titleNormalized = normalizeSearch(title);
+  const queryForms = [...new Set([normalized, transliterateSearch(normalized)])];
+  if (title) {
+    const titleForms = [...new Set([titleNormalized, transliterateSearch(titleNormalized)])];
+    for (const queryForm of queryForms) {
+      for (const titleForm of titleForms) {
+        if (titleForm === queryForm) return 0;
+        if (titleForm.startsWith(queryForm)) return 1;
+        if (titleForm.includes(queryForm)) return 2;
+      }
+    }
+  }
+  const normalizedText = normalizeSearch(searchText);
+  const textForms = [...new Set([normalizedText, transliterateSearch(normalizedText)])];
+  for (const queryForm of queryForms) {
+    const tokens = queryForm.split(' ');
+    if (textForms.some((text) => tokens.every((token) => text.includes(token)))) return 3;
+  }
+  const queryTokens = queryForms.flatMap((form) => form.split(' ')).filter(Boolean);
+  const haystackTokens = getSearchTokens(searchText);
+  let distance = 0;
+  const fuzzyMatch = queryTokens.every((token) => {
+    if (haystackTokens.some((word) => word.includes(token))) return true;
+    if (token.length < 4) return false;
+    const maximum = token.length >= 9 ? 2 : 1;
+    let best = maximum + 1;
+    for (const word of haystackTokens) {
+      if (Math.abs(word.length - token.length) > maximum || word.length < 4) continue;
+      best = Math.min(best, editDistance(token, word, maximum));
+      if (best === 1) break;
+    }
+    distance += best;
+    return best <= maximum;
+  });
+  return fuzzyMatch ? 8 + distance : Infinity;
+}
+
+export function matchesSearch(searchText, query) {
+  return getSearchScore(searchText, query) !== Infinity;
 }
 
 export function getItemColor(key) {
@@ -157,7 +252,7 @@ function normalizeRecipe(recipe, index) {
     stage: milestoneStages[result?.milestone] ?? 0,
     station: recipe.stations.map(getStationLabel).join(' / '),
     description: result?.tooltipRu || `Рецепт создания предмета «${getItemName(recipe.result)}». Все ингредиенты и условия указаны ниже.`,
-    searchText: normalizeSearch(`${getItemName(recipe.result)} ${result?.name || ''} ${recipe.result} ${recipe.stations.map(getStationLabel).join(' ')} ${recipe.ingredients.map((ingredient) => ingredient.group ? getGroupLabel(ingredient.group) : getItemName(ingredient.item)).join(' ')}`),
+    searchText: normalizeSearch(`${getItemName(recipe.result)} ${result?.name || ''} ${recipe.result} ${(itemSearchAliases[recipe.result] || []).join(' ')} ${recipe.stations.map(getStationLabel).join(' ')} ${recipe.ingredients.map((ingredient) => ingredient.group ? getGroupLabel(ingredient.group) : getItemName(ingredient.item)).join(' ')}`),
     ingredients: recipe.ingredients.map((ingredient) => {
       const group = ingredient.group || null;
       const key = ingredient.item || null;
@@ -238,7 +333,9 @@ export function getItemSearchText(key) {
   const sourceNames = (catalog.drops[key] || []).map((drop) => getSourceName(catalog.sources[drop.source]));
   const vendorNames = (catalog.shops[key] || []).map((shop) => getSourceName(catalog.vendors[shop.vendor]));
   const text = normalizeSearch([
-    getItemName(key), item.name, key, ...(item.categories || []).map(getCategoryLabel),
+    getItemName(key), item.name, key, ...(itemSearchAliases[key] || []),
+    ...(item.categories || []).map(getCategoryLabel), ...(item.subcategories || []),
+    item.version || '', ...(item.platforms || []),
     ...(item.obtain || []).map((id) => obtainLabels[id] || id),
     ...(item.biomes || []).map((id) => biomeLabels[id] || id),
     ...(item.events || []).map((id) => eventLabels[id] || id), ...sourceNames, ...vendorNames,
@@ -249,6 +346,31 @@ export function getItemSearchText(key) {
 
 export function getItemStage(key) {
   return milestoneStages[getItem(key)?.milestone] ?? 0;
+}
+
+export const weaponClassLabels = { melee: 'Ближний бой', ranged: 'Дальний бой', magic: 'Магия', summon: 'Призыв' };
+export const platformLabels = {
+  desktop: 'ПК', console: 'Консоли', mobile: 'Мобильные', oldgen: 'Старые консоли',
+  '3ds': 'Nintendo 3DS', japanese: 'Японские версии',
+};
+
+export function getItemBiomes(key) {
+  const item = getItem(key);
+  const ids = new Set(item?.biomes || []);
+  (catalog.drops[key] || []).forEach((drop) => {
+    (drop.biomes || []).forEach((id) => ids.add(id));
+    (catalog.sources[drop.source]?.biomes || []).forEach((id) => ids.add(id));
+  });
+  (catalog.shops[key] || []).forEach((shop) => (shop.biomes || []).forEach((id) => ids.add(id)));
+  return [...ids];
+}
+
+export function matchesWeaponClass(key, weaponClass) {
+  if (weaponClass === 'all') return true;
+  const item = getItem(key);
+  if (item?.damageType) return item.damageType === weaponClass;
+  if (weaponClass === 'summon') return (item?.subcategories || []).some((id) => ['summon-weapon', 'minion', 'sentry', 'whip'].includes(id));
+  return (item?.subcategories || []).includes(weaponClass);
 }
 
 export function isItemVisible(key, currentStageIndex, spoilerFree) {

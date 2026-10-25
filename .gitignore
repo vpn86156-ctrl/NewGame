@@ -1,8 +1,11 @@
 node_modules/
 dist/
+dist-offline/
 .vite/
 .venv/
 .cache/
 .DS_Store
 *.log
+__pycache__/
+*.pyc
 image-search/

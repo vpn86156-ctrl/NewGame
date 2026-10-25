@@ -14,7 +14,30 @@ const variantLabels = {
   'Hardmode variant': 'Вариант в хардмоде', 'Dark Lamia': 'Тёмная ламия',
 };
 const timeLabels = { day: 'Днём', night: 'Ночью' };
-const dropBackedMethods = new Set(['crafted', 'vendor', 'drop', 'loot', 'bag', 'treasure-bag', 'shaking-tree']);
+const dropBackedMethods = new Set(['drop', 'loot', 'bag', 'treasure-bag', 'shaking-tree']);
+const methodHelp = {
+  crafted: 'Предмет создаётся через рецепт, но точная запись рецепта отсутствует в текущем снимке данных.',
+  vendor: 'Продаётся у NPC. Точный магазин не указан в текущей таблице — проверь условия на официальной wiki.',
+  drop: 'Выпадает из противников или существ. Точный источник не указан в текущей таблице дропа.',
+  loot: 'Находится в сундуках, контейнерах или других объектах мира. Точный контейнер не указан в таблице.',
+  bag: 'Может находиться в ящике или наборе. Точный контейнер не указан в таблице.',
+  'treasure-bag': 'Открывай мешки сокровищ боссов в режиме «Эксперт» или «Мастер». Набор и шанс зависят от предмета.',
+  'shaking-tree': 'Встряхивай подходящие деревья в мире. Проверь биом и другие условия в тегах.',
+  plunder: 'Найди этот предмет или объект в указанном месте мира, затем собери его или разбей подходящим инструментом.',
+  fishing: 'Используй удочку в подходящем биоме. Для квестовой рыбы сначала проверь текущее задание Рыбака.',
+  recorded: 'Держи музыкальную шкатулку в инвентаре во время нужной музыки или события, пока она не запишет мелодию.',
+  caught: 'Поймай существо сачком или его улучшенной версией. Условия появления указаны в тегах.',
+  shimmer: 'Брось подходящий предмет в Мерцание. Эфирный биом находится под землёй на стороне джунглей, ближе к океану.',
+  'quest-reward': 'Выполняй ежедневные задания Рыбака. Награда может зависеть от количества выполненных поручений и случайного выбора.',
+  'strange-plant': 'Собирай Странные растения и обменивай их у Торговца красками на особый результат.',
+  'player-death': 'Появляется после смерти персонажа. Вариант объекта зависит от обстоятельств и настроек мира.',
+  extractinator: 'Переработай ил, осадок или подходящие блоки в Экстрактинаторе.',
+  'extractinator-regular': 'Переработай подходящие блоки в обычном Экстрактинаторе.',
+  'chlorophyte-extractinator': 'Используй Хлорофитовый экстрактинатор и подходящий материал.',
+  toilet: 'Используй особый игровой объект согласно условию предмета.',
+  other: 'Этот предмет использует особый способ получения. Открой официальную wiki, если ниже нет отдельного маршрута.',
+  unobtainable: 'Присутствует в данных игры, но недоступен при обычном прохождении.',
+};
 
 function SourceTags({ entry, source }) {
   const biomeIds = [...new Set([...(source?.biomes || []), ...(entry.biomes || [])])];
@@ -72,7 +95,7 @@ function ShopCard({ shop }) {
   );
 }
 
-export default function ItemDetailsModal({ itemKey, returnRecipe = null }) {
+export default function ItemDetailsModal({ itemKey, returnRecipe = null, returnView = 'list' }) {
   const { setModal, favorites, toggleFavorite, navigate } = useGame();
   const item = getItem(itemKey);
   if (!item) return null;
@@ -80,7 +103,12 @@ export default function ItemDetailsModal({ itemKey, returnRecipe = null }) {
   const drops = gameCatalog.drops[itemKey] || [];
   const shops = gameCatalog.shops[itemKey] || [];
   const guides = gameCatalog.acquisitionGuides?.[itemKey] || [];
-  const genericMethods = (item.obtain || []).filter((id) => !dropBackedMethods.has(id) && !(id === 'plunder' && guides.length));
+  const genericMethods = (item.obtain || []).filter((id) => {
+    if (id === 'crafted') return recipes.length === 0;
+    if (id === 'vendor') return shops.length === 0;
+    if (dropBackedMethods.has(id)) return drops.length === 0;
+    return !(id === 'plunder' && guides.length);
+  });
   const favoriteId = `item-${itemKey}`;
   const favorite = favorites.includes(favoriteId);
   const hasSources = recipes.length + drops.length + shops.length + genericMethods.length + guides.length > 0;
@@ -98,9 +126,9 @@ export default function ItemDetailsModal({ itemKey, returnRecipe = null }) {
 
       {guides.length > 0 && <section className="modal-section acquisition-section">
         <span className="eyebrow"><MapPin size={12} /> НАГЛЯДНЫЙ МАРШРУТ</span>
-        <div className="visual-acquisition-guides">{guides.map((guide) => <article className="visual-acquisition-guide" key={guide.title}>
-          <a href={guide.url} target="_blank" rel="noreferrer" className="visual-acquisition-guide__image"><img src={guide.image} alt={guide.imageAlt} /></a>
-          <div><span className="acquisition-source__kind">Объект в мире</span><h3>{guide.title}</h3><p>{guide.text}</p><div className="acquisition-tags"><span>{guide.biome}</span><span>Шанс: {guide.rate}</span></div></div>
+        <div className="visual-acquisition-guides">{guides.map((guide) => <article className={`visual-acquisition-guide ${guide.image ? '' : 'visual-acquisition-guide--compact'}`} key={guide.title}>
+          {guide.image ? <a href={guide.url} target="_blank" rel="noreferrer" className="visual-acquisition-guide__image"><img src={guide.image} alt={guide.imageAlt} /></a> : <div className="visual-acquisition-guide__icon"><TerrariaIcon itemKey={itemKey} size="lg" /></div>}
+          <div><span className="acquisition-source__kind">{guide.kind || 'Особый маршрут'}</span><h3>{guide.title}</h3><p>{guide.text}</p><div className="acquisition-tags">{guide.biome && <span>{guide.biome}</span>}{guide.rate && <span>{guide.rate}</span>}</div></div>
         </article>)}</div>
       </section>}
 
@@ -129,14 +157,14 @@ export default function ItemDetailsModal({ itemKey, returnRecipe = null }) {
         <span className="eyebrow"><MapPin size={12} /> ДРУГИЕ СПОСОБЫ</span>
         <div className="acquisition-sources">{genericMethods.map((id) => {
           const method = gameCatalog.obtainMethods.find((entry) => entry.id === id);
-          return <article className="acquisition-source" key={id}><div className="acquisition-source__visual"><NamedSprite icon={method?.icon?.split('/').pop()} label={obtainLabels[id]} size={46} /></div><div className="acquisition-source__body"><span className="acquisition-source__kind">Способ получения</span><h4>{obtainLabels[id] || method?.name || id}</h4><SourceTags entry={item} source={null} /></div></article>;
+          return <article className="acquisition-source" key={id}><div className="acquisition-source__visual"><NamedSprite icon={method?.icon?.split('/').pop()} label={obtainLabels[id]} size={46} /></div><div className="acquisition-source__body"><span className="acquisition-source__kind">Способ получения</span><h4>{obtainLabels[id] || method?.name || id}</h4><SourceTags entry={item} source={null} /><p className="acquisition-source__note">{methodHelp[id] || 'Проверь условия получения предмета на официальной wiki.'}</p></div></article>;
         })}</div>
       </section>}
 
       {!hasSources && <div className="acquisition-empty"><PackageOpen size={25} /><div><strong>Точный источник не указан</strong><p>{item.unobtainable ? 'Этот предмет есть в данных игры, но его нельзя получить обычным способом.' : 'Для этого предмета в базе нет отдельной записи о получении. Открой официальную wiki за подробностями.'}</p></div></div>}
 
       <div className="modal-actions item-details-actions">
-        {returnRecipe && <button className="button button--soft" onClick={() => setModal({ type: 'recipe', item: returnRecipe })}><ChevronLeft size={17} /> К рецепту</button>}
+        {returnRecipe && <button className="button button--soft" onClick={() => setModal({ type: 'recipe', item: returnRecipe, initialView: returnView })}><ChevronLeft size={17} /> К рецепту</button>}
         <button className="button button--soft" onClick={() => { setModal(null); navigate('resources'); }}><Backpack size={17} /> В рюкзак</button>
         {item.url && <a className="button button--ghost" href={item.url} target="_blank" rel="noreferrer">Wiki <ExternalLink size={14} /></a>}
         <button className="button button--primary" onClick={() => setModal({ type: 'journal-new', prefill: { title: `Найти: ${getItemName(itemKey)}`, text: `Способы: ${(item.obtain || []).map((id) => obtainLabels[id] || id).join(', ')}`, tag: 'Находка' } })}><Plus size={16} /> В дневник</button>

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   ArrowRight, Backpack, BookOpen, Check, CheckCircle2, ChevronRight, Clock3,
-  Dices, Feather, Heart, Lightbulb, MapPin, Plus, Sparkles, Trash2, Trophy,
+  Dices, Feather, GitBranch, Heart, Lightbulb, MapPin, Plus, Sparkles, Trash2, Trophy,
 } from 'lucide-react';
 import { useGame } from '../context';
 import { worldTasks } from '../data';
@@ -10,14 +10,17 @@ import { ItemIcon, Modal } from './UI';
 import TerrariaIcon from './TerrariaIcon';
 import StageIcon from './StageIcon';
 import ItemDetailsModal from './ItemDetailsModal';
+import RecipeTree from './RecipeTree';
+import OfflineModal from './OfflineModal';
 
 function ModalTitle({ eyebrow, title, children }) {
   return <div className="modal-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{children}</div>;
 }
 
-function RecipeModal({ item }) {
+function RecipeModal({ item, initialView = 'list' }) {
   const { inventory, navigate, setModal, favorites, toggleFavorite } = useGame();
   const [activeRecipe, setActiveRecipe] = useState(item);
+  const [recipeView, setRecipeView] = useState(initialView);
   const variants = getRecipesForItem(item.result);
   const favorite = favorites.includes(activeRecipe.id);
   return (
@@ -29,7 +32,9 @@ function RecipeModal({ item }) {
       </div>
       <p className="item-modal__description">{activeRecipe.description}</p>
       {variants.length > 1 && <div className="modal-section recipe-variants"><span className="eyebrow">СПОСОБЫ СОЗДАНИЯ · {variants.length}</span><div>{variants.map((recipe, index) => <button key={recipe.id} className={activeRecipe.id === recipe.id ? 'is-active' : ''} onClick={() => setActiveRecipe(recipe)}><TerrariaIcon itemKey={recipe.result} size="sm" /><span><strong>Вариант {index + 1}</strong><small>{recipe.station}</small></span>{activeRecipe.id === recipe.id && <Check size={15} />}</button>)}</div></div>}
-      <div className="modal-section"><span className="eyebrow">ПОНАДОБИТСЯ · НАЖМИ НА ИНГРЕДИЕНТ, ЧТОБЫ УЗНАТЬ, ГДЕ ЕГО ВЗЯТЬ</span><div className="modal-ingredients">
+      <div className="modal-section recipe-view-section">
+        <div className="recipe-view-heading"><span className="eyebrow">{recipeView === 'tree' ? 'ДЕРЕВО · РАСКРЫВАЙ ВЕТВИ И СМОТРИ, ГДЕ СОБРАТЬ НАХОДКИ' : 'ПОНАДОБИТСЯ · НАЖМИ НА ИНГРЕДИЕНТ, ЧТОБЫ УЗНАТЬ, ГДЕ ЕГО ВЗЯТЬ'}</span><button className="recipe-view-toggle" onClick={() => setRecipeView(recipeView === 'tree' ? 'list' : 'tree')}><GitBranch size={15} />{recipeView === 'tree' ? 'Показать списком' : 'Отобразить деревом'}</button></div>
+        {recipeView === 'tree' ? <RecipeTree key={activeRecipe.id} recipe={activeRecipe} /> : <div className="modal-ingredients">
         {activeRecipe.ingredients.map((ingredient) => {
           const have = getIngredientCount(inventory, ingredient);
           const enough = have >= ingredient.amount;
@@ -42,8 +47,8 @@ function RecipeModal({ item }) {
             {ingredient.group && <details className="ingredient-options"><summary>Все допустимые варианты ({ingredient.options.length}) · нажми на предмет для подробностей</summary><div>{ingredient.options.map((key) => <button key={key} onClick={() => setModal({ type: 'item', itemKey: key, returnRecipe: activeRecipe })} className={(inventory[key] || 0) >= ingredient.amount ? 'has-enough' : ''}><TerrariaIcon itemKey={key} size="sm" /><em>{getItemName(key)}</em><b>{inventory[key] || 0}</b><ChevronRight size={12} /></button>)}</div></details>}
           </div>;
         })}
-      </div></div>
-      <div className="station-note"><TerrariaIcon itemKey={getStationIcon(activeRecipe.stations[0])} size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{activeRecipe.station}</strong></div></div>
+      </div>}</div>
+      {recipeView === 'list' && <div className="station-note"><TerrariaIcon itemKey={getStationIcon(activeRecipe.stations[0])} size="sm" /><div><small>ГДЕ СОЗДАТЬ</small><strong>{activeRecipe.station}</strong></div></div>}
       {activeRecipe.platforms?.some((platform) => !['desktop', 'console', 'mobile'].includes(platform)) && <div className="recipe-platform-note">Рецепт с платформенными ограничениями: {activeRecipe.platforms.join(', ')}</div>}
       <div className="modal-actions"><button className="button button--soft" onClick={() => { setModal(null); navigate('resources'); }}><Backpack size={17} /> Проверить ресурсы</button><button className="button button--primary" onClick={() => setModal(null)}>Понятно <Check size={17} /></button></div>
     </Modal>
@@ -173,8 +178,9 @@ export default function ModalRoot() {
   const close = useCallback(() => setModal(null), [setModal]);
   if (!modal) return null;
   switch (modal.type) {
-    case 'recipe': return <RecipeModal item={modal.item} />;
-    case 'item': return <ItemDetailsModal itemKey={modal.itemKey} returnRecipe={modal.returnRecipe} />;
+    case 'recipe': return <RecipeModal key={modal.item.id} item={modal.item} initialView={modal.initialView} />;
+    case 'item': return <ItemDetailsModal itemKey={modal.itemKey} returnRecipe={modal.returnRecipe} returnView={modal.returnView} />;
+    case 'offline': return <OfflineModal />;
     case 'obtain': return <ObtainModal item={modal.item} />;
     case 'complete-stage': return <CompleteStageModal stage={modal.stage} />;
     case 'reset-world': return <ResetWorldModal />;

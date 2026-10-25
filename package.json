@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "npm run build:offline && vite build && python scripts/generate_sw.py dist",
+    "build:offline": "vite build --config vite.offline.config.js && python scripts/package_offline.py",
+    "build:online": "vite build && python scripts/generate_sw.py dist",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -18,6 +20,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.1.0"
+    "vite": "^6.1.0",
+    "vite-plugin-singlefile": "^2.3.4"
   }
 }

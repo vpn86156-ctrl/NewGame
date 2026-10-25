@@ -13,7 +13,10 @@ assert len(items) == catalog['meta']['sourceItemCount'] == len(catalog['items'])
 assert len(recipes['recipes']) == len(catalog['recipes']) == catalog['meta']['recipeCount'] == 3655
 assert recipes['recipes'] == catalog['recipes'], 'Recipes differ from upstream'
 assert catalog['meta']['gameVersion'] == '1.4.5'
-assert catalog['meta']['russianNameCount'] >= 5400
+assert catalog['meta']['russianNameCount'] >= 5426
+assert catalog['items']['GPS']['nameRu'] == 'Навигатор'
+assert all('platforms' in item for item in catalog['items'].values())
+assert catalog['items']['Zenith']['version'] == '1.4.0'
 assert len(catalog['sources']) == 488
 assert len(catalog['npcs']) == 26
 assert len(catalog['otherNpcs']) == 14
@@ -54,6 +57,7 @@ for npc in catalog['npcs']:
 assert catalog['items']['Zenith']['nameRu'].strip('«»') == 'Зенит'
 assert 'plunder' in catalog['items']['EnchantedSword']['obtain']
 assert catalog['acquisitionGuides']['EnchantedSword'][0]['rate'] == '96,67%'
+assert len(catalog['acquisitionGuides']) >= 4
 assert Path('public/images/acquisition/enchanted-sword-shrine.png').exists()
 zenith = [recipe for recipe in catalog['recipes'] if recipe['result'] == 'Zenith']
 assert len(zenith) == 1 and len(zenith[0]['ingredients']) == 10

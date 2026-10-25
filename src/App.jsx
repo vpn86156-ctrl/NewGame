@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle, Backpack, BookOpen, Check, CheckCircle2, ChevronDown, ChevronRight,
-  Compass, Eye, EyeOff, Hammer, Home, Info, Map, Menu, Play, RotateCcw, Search,
+  Compass, Download, Eye, EyeOff, Hammer, Home, Info, Map, Menu, Play, RotateCcw, Search,
   ScrollText, Sparkles, TreePine, Users, X,
 } from 'lucide-react';
 import { useGame } from './context';
@@ -59,6 +59,7 @@ function Sidebar() {
           <AnimatePresence>{worldMenu && (
             <motion.div className="world-switcher__menu" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
               <div><span>Прогресс мира</span><strong>{progress.length} / {stages.length}</strong></div>
+              <button onClick={() => { setWorldMenu(false); setModal({ type: 'offline' }); }}><Download size={14} /> Офлайн и сохранение</button>
               <button onClick={() => { setWorldMenu(false); setModal({ type: 'reset-world' }); }}><RotateCcw size={14} /> Начать новый путь</button>
               <button onClick={() => { setWorldMenu(false); window.dispatchEvent(new Event('terra:replay-intro')); }}><Play size={14} /> Повторить вступление</button>
             </motion.div>
@@ -97,7 +98,7 @@ function Sidebar() {
 }
 
 function Topbar() {
-  const { setSearchOpen, spoilerFree, setSpoilerFree, setMobileNavOpen, showToast, currentStageIndex } = useGame();
+  const { setSearchOpen, spoilerFree, setSpoilerFree, setMobileNavOpen, setModal, showToast, currentStageIndex } = useGame();
   return (
     <header className="topbar">
       <button className="icon-button topbar__menu" onClick={() => setMobileNavOpen(true)} aria-label="Открыть меню"><Menu size={21} /></button>
@@ -106,6 +107,7 @@ function Topbar() {
         <Search size={18} /><span>Найти предмет, босса или историю…</span><kbd>CTRL K</kbd>
       </button>
       <div className="topbar__actions">
+        <button className="offline-topbar-button" onClick={() => setModal({ type: 'offline' })} title="Офлайн-версия и резервное сохранение"><Download size={17} /><span>Офлайн</span></button>
         <button
           className={`spoiler-toggle ${spoilerFree ? 'is-active' : ''}`} role="switch" aria-checked={spoilerFree}
           onClick={() => {

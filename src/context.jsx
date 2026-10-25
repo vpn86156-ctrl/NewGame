@@ -103,16 +103,27 @@ export function GameProvider({ children }) {
     setJournal((items) => items.map((entry) => entry.id === id ? { ...entry, favorite: !entry.favorite } : entry));
   }, [setJournal]);
 
+  const restoreSave = useCallback((data) => {
+    setProgress(data.progress);
+    setSpoilerFree(data.spoilerFree);
+    setInventory(migrateInventory(data.inventory));
+    setJournal(data.journal);
+    setFavorites(data.favorites);
+    setChallengeAccepted(data.challengeAccepted);
+    setModal(null);
+    showToast('Сохранение восстановлено: рюкзак, прогресс и дневник на месте.');
+  }, [setChallengeAccepted, setFavorites, setInventory, setJournal, setProgress, setSpoilerFree, showToast]);
+
   const value = useMemo(() => ({
     view, navigate, progress, spoilerFree, setSpoilerFree, inventory, setInventory, updateResource,
-    journal, setJournal, addJournalEntry, deleteJournalEntry, toggleJournalFavorite,
+    journal, setJournal, addJournalEntry, deleteJournalEntry, toggleJournalFavorite, restoreSave,
     favorites, toggleFavorite, challengeAccepted, setChallengeAccepted,
     currentStageIndex, currentStage, allComplete, completeStage, resetProgress,
     modal, setModal, searchOpen, setSearchOpen, toasts, showToast,
     mobileNavOpen, setMobileNavOpen, activeTask, setActiveTask,
   }), [
     view, navigate, progress, spoilerFree, setSpoilerFree, inventory, setInventory, updateResource,
-    journal, setJournal, addJournalEntry, deleteJournalEntry, toggleJournalFavorite,
+    journal, setJournal, addJournalEntry, deleteJournalEntry, toggleJournalFavorite, restoreSave,
     favorites, toggleFavorite, challengeAccepted, setChallengeAccepted,
     currentStageIndex, currentStage, allComplete, completeStage, resetProgress,
     modal, searchOpen, toasts, showToast, mobileNavOpen, activeTask,
